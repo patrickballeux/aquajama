@@ -1,0 +1,14 @@
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/agent/tools/AgentTool.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/agent/tools/LaunchAppTool.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/agent/tools/ReadFileTool.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/agent/tools/ReadImageTool.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/agent/tools/SystemInfoTool.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/agent/tools/WebBrowserTool.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/aquaJamaDesktop.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/data/Config.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/desktopSession.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/ollama/Client.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/ollama/Model.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/ollama/StreamListener.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/ollama/Token.java
+/Users/patrickballeux/Dev/ollama-java-agent/src/main/java/com/pb/aquajama/sessions/Session.java
