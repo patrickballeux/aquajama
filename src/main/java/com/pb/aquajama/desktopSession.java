@@ -69,16 +69,16 @@ public class desktopSession extends javax.swing.JInternalFrame {
     }
 
     private void sanitizeText() {
-        String text = txtResponse.getText();
-        int index1 = text.indexOf("```json");
-        if (index1 >= 0){
-            int index2 = text.indexOf("```", index1 + 6);
-            if (index2 >= 0){
-                text = text.substring(0, index1) + text.substring(index2+3);
-                txtResponse.setText(text);
-                txtResponse.setCaretPosition(txtResponse.getDocument().getLength());
-            }
-        }
+//        String text = txtResponse.getText();
+//        int index1 = text.indexOf("```json");
+//        if (index1 >= 0){
+//            int index2 = text.indexOf("```", index1 + 6);
+//            if (index2 >= 0){
+//                text = text.substring(0, index1) + text.substring(index2+3);
+//                txtResponse.setText(text);
+//                txtResponse.setCaretPosition(txtResponse.getDocument().getLength());
+//            }
+//        }
     }
 
     /**
