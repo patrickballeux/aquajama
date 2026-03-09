@@ -4,6 +4,9 @@
  */
 package com.pb.aquajama;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pb.aquajama.agent.tools.AgentTool;
+import com.pb.aquajama.agent.tools.ToolRegistry;
 import com.pb.aquajama.data.Config;
 import com.pb.aquajama.ollama.Client;
 import com.pb.aquajama.ollama.Model;
@@ -24,6 +27,7 @@ public class aquaJamaDesktop extends javax.swing.JFrame {
     private final Config config;
     private final Client client;
     private List<Model> models;
+    private List<AgentTool> tools;
 
     /**
      * Creates new form aquaJamaDesktop
@@ -32,6 +36,7 @@ public class aquaJamaDesktop extends javax.swing.JFrame {
         initComponents();
         this.config = new Config();
         this.client = new Client(Client.LOCAL_URL);  // start with local
+        this.tools = ToolRegistry.createDefaultTools(new ObjectMapper());
         initNewSessionMenu();
         var icon = new javax.swing.ImageIcon(getClass().getResource("/icons/logo.png")).getImage();
         this.setIconImage(icon);
@@ -133,7 +138,7 @@ public class aquaJamaDesktop extends javax.swing.JFrame {
     private void mnuModel_ActionPerformed(java.awt.event.ActionEvent evt) {
         var modelName = evt.getActionCommand();
         var model = models.stream().filter(x -> (x.name() == null ? modelName == null : x.name().equals(modelName))).findFirst();
-        Session session = new Session(model.get(), client);
+        Session session = new Session(model.get(), client,tools);
         var frame = new desktopSession(session);
         frame.setSize(300, 300);
         desktop.add(frame);
