@@ -86,7 +86,7 @@ public class Session implements StreamListener {
                 systemPrompt,
                 userPrompt,
                 images,
-                false,
+                true,
                 this
         );
     }
@@ -95,9 +95,8 @@ public class Session implements StreamListener {
     public void onToken(Token token) {
 
         String text = token.text();
-
+        boolean isNew = lastMessage.isEmpty();
         lastMessage += text;
-        pendingText += text;
 
         if (token.isThinking()) {
             if (uiConsumer != null) {
@@ -109,24 +108,29 @@ public class Session implements StreamListener {
         JsonNode toolNode = extractJsonToolBlock(lastMessage);
 
         if (toolNode != null) {
-
-            pendingText = "";
             lastMessage = "";
-
             handleToolInvocation(toolNode);
             return;
         }
-
         // Wait until we know it's not a tool
         if (pendingText.contains("```json")) {
             return;
         }
-
-        if (uiConsumer != null && !pendingText.isBlank()) {
-            uiConsumer.accept(new Token(pendingText, false));
+        if (lastMessage.length() <= 7) {
+            return;
+        }
+        if (lastMessage.startsWith("```json")) {
+            return;
         }
 
-        pendingText = "";
+        if (uiConsumer != null) {
+            if (isNew) {
+                // sending from the start...
+                uiConsumer.accept(new Token(lastMessage,false));
+                return;
+            }
+            uiConsumer.accept(token);
+        }
     }
 
     @Override
