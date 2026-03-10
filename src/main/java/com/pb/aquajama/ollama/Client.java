@@ -35,6 +35,7 @@ public class Client {
             String systemPrompt,
             String userPrompt,
             List<BufferedImage> images,
+            boolean stream,
             StreamListener listener
     ) {
 
@@ -45,7 +46,8 @@ public class Client {
         String body = OllamaRequestBuilder.buildGenerateRequest(
                 model,
                 prompt,
-                encodedImages
+                encodedImages, 
+                stream
         );
 
         streamHandler.stream(body, listener);

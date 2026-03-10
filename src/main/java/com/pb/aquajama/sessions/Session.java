@@ -20,6 +20,7 @@ public class Session implements StreamListener {
 
     private String lastUserPrompt = "";
     private String lastMessage = "";
+    private String pendingText = "";
 
     public final Model model;
     private final Client client;
@@ -46,11 +47,13 @@ public class Session implements StreamListener {
                 Tools:
                 %s
 
+                If a tools is required,  deactivate streaming.
                 When appropriate, you MUST use these tools by emitting a JSON block
                 inside ```json ...``` with the correct "action" and parameters.
                 After the tool is executed, you will receive the tool result and
                 should respond to the user related to their query.
                 Do not explain how you will use the tool. Keep it simple.
+                
                 """.formatted(toolRules);
     }
 
@@ -83,28 +86,47 @@ public class Session implements StreamListener {
                 systemPrompt,
                 userPrompt,
                 images,
+                false,
                 this
         );
     }
 
     @Override
     public void onToken(Token token) {
-        String text = token.text();
-        lastMessage += text;
 
-        if (uiConsumer != null && !text.isEmpty()) {
-            uiConsumer.accept(token);
-        }
+        String text = token.text();
+
+        lastMessage += text;
+        pendingText += text;
 
         if (token.isThinking()) {
+            if (uiConsumer != null) {
+                uiConsumer.accept(token);
+            }
             return;
         }
 
         JsonNode toolNode = extractJsonToolBlock(lastMessage);
+
         if (toolNode != null) {
+
+            pendingText = "";
             lastMessage = "";
+
             handleToolInvocation(toolNode);
+            return;
         }
+
+        // Wait until we know it's not a tool
+        if (pendingText.contains("```json")) {
+            return;
+        }
+
+        if (uiConsumer != null && !pendingText.isBlank()) {
+            uiConsumer.accept(new Token(pendingText, false));
+        }
+
+        pendingText = "";
     }
 
     @Override
@@ -210,5 +232,15 @@ public class Session implements StreamListener {
 
     public List<AgentTool> getTools() {
         return tools;
+    }
+
+    public Model getModel() {
+        return model;
+    }
+
+    private boolean looksLikeToolProtocol(String text) {
+        return text.contains("```json")
+                || text.contains("\"action\"")
+                || text.contains("\"tool\"");
     }
 }

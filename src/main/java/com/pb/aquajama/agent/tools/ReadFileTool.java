@@ -33,7 +33,6 @@ public class ReadFileTool implements AgentTool {
         return "read_file";
     }
 
-    @Override
     public String getDescription() {
         return "Read the contents of a text file (local path or HTTP/HTTPS URL) and send them to the AI.";
     }
@@ -64,7 +63,6 @@ public class ReadFileTool implements AgentTool {
         return getActionName().equals(action.path("action").asText(""));
     }
 
-
     /**
      * New contract used by Session: the tool talks directly to Client via
      * Session.
@@ -93,7 +91,7 @@ public class ReadFileTool implements AgentTool {
         sendToUi(session, "[read_file] Loaded text from: " + pathStr
                 + (truncated ? " (truncated)" : "") + "\n");
 
- String userPrompt = """
+        String userPrompt = """
         You previously requested to use a tool to answer the user's question:
 
         "%s"
@@ -109,12 +107,12 @@ public class ReadFileTool implements AgentTool {
           using ONLY the RESULT above as context.
         """.formatted(session.getLastUserPrompt(), content);
 
-
         session.getClient().sendPrompt(
                 session.model,
                 session.getDefaultSystemPrompt(),
                 userPrompt,
                 java.util.Collections.emptyList(), // no images
+                true,
                 session // Session as StreamListener
         );
     }

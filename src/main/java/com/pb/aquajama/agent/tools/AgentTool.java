@@ -6,8 +6,6 @@ public interface AgentTool {
 
     String getActionName(); // e.g. "send_email"
 
-    String getDescription(); // for prompt / docs, optional
-
     String buildRuleSnippet(); // text to inject into system prompt
 
     boolean supports(JsonNode action);

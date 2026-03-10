@@ -15,7 +15,8 @@ public final class ToolRegistry {
                 new ReadFileTool(mapper),
                 new ReadImageTool(mapper),
                 new SystemInfoTool(),
-                new WebBrowserTool()
+                new WebBrowserTool(),
+                new EchoTool()
         );
     }
 }

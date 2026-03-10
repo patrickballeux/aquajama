@@ -22,7 +22,6 @@ public class LaunchAppTool implements AgentTool {
         return "launch_app";
     }
 
-    @Override
     public String getDescription() {
         return "List and launch macOS applications from /Applications and ~/Applications.";
     }
@@ -83,6 +82,7 @@ public class LaunchAppTool implements AgentTool {
                     session.getDefaultSystemPrompt(),
                     userPrompt,
                     java.util.Collections.emptyList(),
+                    true,
                     session
             );
 
@@ -111,6 +111,7 @@ public class LaunchAppTool implements AgentTool {
                     session.getDefaultSystemPrompt(),
                     userPrompt,
                     java.util.Collections.emptyList(),
+                    true,
                     session
             );
 

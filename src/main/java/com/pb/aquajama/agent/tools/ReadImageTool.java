@@ -29,7 +29,6 @@ public class ReadImageTool implements AgentTool {
         return "read_image";
     }
 
-    @Override
     public String getDescription() {
         return "Loads an image from a file path or URL so the AI can analyze or describe it.";
     }
@@ -97,12 +96,12 @@ public class ReadImageTool implements AgentTool {
           using ONLY the RESULT above as context.
         """.formatted(session.getLastUserPrompt());
 
-
         session.getClient().sendPrompt(
                 session.model,
                 session.getDefaultSystemPrompt(),
                 userPrompt,
                 List.of(image),
+                true,
                 session // Session is still the StreamListener back to the UI
         );
     }

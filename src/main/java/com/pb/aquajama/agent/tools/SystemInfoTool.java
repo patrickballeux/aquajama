@@ -14,7 +14,6 @@ public class SystemInfoTool implements AgentTool {
         return "system_info";
     }
 
-    @Override
     public String getDescription() {
         return "Query basic system information (disk, memory, processes).";
     }
@@ -134,6 +133,7 @@ public class SystemInfoTool implements AgentTool {
                 session.getDefaultSystemPrompt(),
                 userPrompt,
                 java.util.Collections.emptyList(),
+                true,
                 session
         );
     }

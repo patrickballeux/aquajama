@@ -7,7 +7,8 @@ public class OllamaRequestBuilder {
     public static String buildGenerateRequest(
             Model model,
             String prompt,
-            List<String> images
+            List<String> images,
+            boolean stream
     ) {
 
         String normalizedPrompt = prompt
@@ -19,7 +20,7 @@ public class OllamaRequestBuilder {
         body.append("{");
         body.append("\"model\":\"").append(model.name()).append("\",");
         body.append("\"prompt\":\"").append(escape(normalizedPrompt)).append("\",");
-        body.append("\"stream\":true,");
+        body.append("\"stream\":%b,".formatted(stream));
         body.append("\"think\":").append(model.canThink());
 
         if (!images.isEmpty()) {
