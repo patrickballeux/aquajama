@@ -21,7 +21,7 @@ public class OllamaRequestBuilder {
         body.append("\"model\":\"").append(model.name()).append("\",");
         body.append("\"prompt\":\"").append(escape(normalizedPrompt)).append("\",");
         body.append("\"stream\":%b,".formatted(stream));
-        body.append("\"think\":").append(model.canThink());
+        body.append("\"think\":").append(true);
 
         if (!images.isEmpty()) {
 

@@ -33,7 +33,7 @@ public class OllamaStreamHandler {
             try {
 
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url + "/api/generate"))
+                        .uri(URI.create(url + "/api/chat"))
                         .timeout(Duration.ofMinutes(2))
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -68,9 +68,29 @@ public class OllamaStreamHandler {
                             continue;
                         }
 
-                        String text = node.path("response").asText("");
-                        String thinking = node.path("thinking").asText("");
+                        String text = "";
+                        String thinking = "";
                         boolean done = node.path("done").asBoolean(false);
+
+                        // -------- CHAT ENDPOINT --------
+                        if (node.has("message")) {
+
+                            JsonNode message = node.get("message");
+
+                            if (message.has("content")) {
+                                text = message.get("content").asText("");
+                            }
+                        }
+
+                        // -------- GENERATE ENDPOINT --------
+                        else if (node.has("response")) {
+                            text = node.get("response").asText("");
+                        }
+
+                        // optional thinking field
+                        if (node.has("thinking")) {
+                            thinking = node.get("thinking").asText("");
+                        }
 
                         if (!thinking.isEmpty()) {
                             listener.onToken(new Token(thinking, true));

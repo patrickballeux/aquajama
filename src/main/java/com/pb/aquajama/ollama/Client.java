@@ -3,6 +3,7 @@ package com.pb.aquajama.ollama;
 import java.awt.image.BufferedImage;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Client {
@@ -39,32 +40,81 @@ public class Client {
             StreamListener listener
     ) {
 
-        String prompt = buildPrompt(systemPrompt, userPrompt);
-
         List<String> encodedImages = ImageEncoder.encode(images);
 
-        String body = OllamaRequestBuilder.buildGenerateRequest(
+        String body = buildChatRequest(
                 model,
-                prompt,
-                encodedImages, 
+                systemPrompt,
+                userPrompt,
+                encodedImages,
                 stream
         );
 
         streamHandler.stream(body, listener);
     }
 
-    private String buildPrompt(String systemPrompt, String userPrompt) {
+    private String buildChatRequest(
+            Model model,
+            String systemPrompt,
+            String userPrompt,
+            List<String> images,
+            boolean stream
+    ) {
 
-        StringBuilder sb = new StringBuilder();
+        StringBuilder body = new StringBuilder();
+
+        body.append("{");
+        body.append("\"model\":\"").append(model.name()).append("\",");
+
+        body.append("\"messages\":[");
+
+        boolean first = true;
 
         if (systemPrompt != null && !systemPrompt.isBlank()) {
-            sb.append(systemPrompt.trim()).append("\n\n");
+            body.append("{");
+            body.append("\"role\":\"system\",");
+            body.append("\"content\":").append(jsonEscape(systemPrompt));
+            body.append("}");
+            first = false;
         }
 
         if (userPrompt != null) {
-            sb.append(userPrompt);
+
+            if (!first) {
+                body.append(",");
+            }
+
+            body.append("{");
+            body.append("\"role\":\"user\",");
+            body.append("\"content\":").append(jsonEscape(userPrompt));
+
+            if (!images.isEmpty()) {
+                body.append(",\"images\":[");
+                for (int i = 0; i < images.size(); i++) {
+                    if (i > 0) {
+                        body.append(",");
+                    }
+                    body.append("\"").append(images.get(i)).append("\"");
+                }
+                body.append("]");
+            }
+
+            body.append("}");
         }
 
-        return sb.toString();
+        body.append("],");
+        
+        body.append("\"stream\":").append(stream);
+
+        body.append("}");
+
+        return body.toString();
+    }
+
+    private String jsonEscape(String text) {
+        return "\"" + text
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n") + "\"";
     }
 }

@@ -1,6 +1,7 @@
 package com.pb.aquajama.agent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.pb.aquajama.ollama.Token;
 import com.pb.aquajama.sessions.Session;
 
 public class EchoTool implements AgentTool {
@@ -20,20 +21,16 @@ public class EchoTool implements AgentTool {
 
         String text = node.path("text").asText("");
 
-        session.getClient().sendPrompt(session.getModel(), "Simply stream this to the user.", text, null, true, session);
-        
+        if (session.getUiConsumer() != null){
+            session.getUiConsumer().accept(new Token(text,false));
+        }        
     }
 
     @Override
     public String buildRuleSnippet() {
         return """
         Tool: echo
-        Use this tool to return text to the user.
-        Example:
-        {
-          "action": "echo",
-          "text": "Hello"
-        }
+        DO NOT USE THIS TOOL.  Just use plain text.
         """;
     }
 }

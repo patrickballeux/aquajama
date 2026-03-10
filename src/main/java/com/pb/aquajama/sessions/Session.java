@@ -20,7 +20,6 @@ public class Session implements StreamListener {
 
     private String lastUserPrompt = "";
     private String lastMessage = "";
-    private String pendingText = "";
 
     public final Model model;
     private final Client client;
@@ -43,16 +42,14 @@ public class Session implements StreamListener {
 
         return """
                 You are a local desktop assistant with access to these tools.
+                Answer to the user using normal streaming text.
+                Do not use the echo tool.
 
                 Tools:
                 %s
 
-                When appropriate, you MUST use these tools by emitting a JSON block
-                inside ```json ...``` with the correct "action" and parameters.
-                After the tool is executed, you will receive the tool result and
-                should respond to the user related to their query.
+                When using a tool, just send the payload.
                 Do not explain how you will use the tool. Keep it simple.
-                Avoid using the echo tool if not needed.
                 """.formatted(toolRules);
     }
 
@@ -94,7 +91,6 @@ public class Session implements StreamListener {
     public void onToken(Token token) {
 
         String text = token.text();
-        boolean isNew = lastMessage.isEmpty();
         lastMessage += text;
 
         if (token.isThinking()) {
@@ -112,22 +108,12 @@ public class Session implements StreamListener {
             return;
         }
         // Wait until we know it's not a tool
-        if (pendingText.contains("```json")) {
+        if (lastMessage.startsWith("{")) {
             return;
         }
-        if (lastMessage.length() <= 7) {
-            return;
-        }
-        if (lastMessage.startsWith("```json")) {
-            return;
-        }
-
         if (uiConsumer != null) {
-            if (isNew) {
-                // sending from the start...
-                uiConsumer.accept(new Token(lastMessage,false));
-                return;
-            }
+            // sending from the start...
+ 
             uiConsumer.accept(token);
         }
     }
@@ -135,7 +121,6 @@ public class Session implements StreamListener {
     @Override
     public void onComplete(Throwable error) {
         lastMessage = "";
-
         if (uiConsumer == null) {
             return;
         }
@@ -152,25 +137,13 @@ public class Session implements StreamListener {
             return null;
         }
 
-        int fenceStart = content.lastIndexOf("```json");
-        if (fenceStart == -1) {
-            return null;
-        }
-
-        int fenceEnd = content.indexOf("```", fenceStart + 7);
-        if (fenceEnd == -1) {
-            return null;
-        }
-
-        String fenced = content.substring(fenceStart + 7, fenceEnd).trim();
-
-        int braceStart = fenced.indexOf('{');
-        int braceEnd = fenced.lastIndexOf('}');
+        int braceStart = content.indexOf('{');
+        int braceEnd = content.lastIndexOf('}');
         if (braceStart == -1 || braceEnd == -1 || braceEnd <= braceStart) {
             return null;
         }
 
-        String jsonStr = fenced.substring(braceStart, braceEnd + 1).trim();
+        String jsonStr = content.substring(braceStart, braceEnd + 1).trim();
 
         try {
             JsonNode node = mapper.readTree(jsonStr);
