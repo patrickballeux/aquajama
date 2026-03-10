@@ -47,13 +47,12 @@ public class Session implements StreamListener {
                 Tools:
                 %s
 
-                If a tools is required,  deactivate streaming.
                 When appropriate, you MUST use these tools by emitting a JSON block
                 inside ```json ...``` with the correct "action" and parameters.
                 After the tool is executed, you will receive the tool result and
                 should respond to the user related to their query.
                 Do not explain how you will use the tool. Keep it simple.
-                
+                Avoid using the echo tool if not needed.
                 """.formatted(toolRules);
     }
 
