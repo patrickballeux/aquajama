@@ -77,24 +77,19 @@ public class ReadImageTool implements AgentTool {
             return;
         }
 
-        // Optional: inform UI that the tool is running
-//        sendToUi(session, "[read_image] Loaded image from: " + path
-//                + " (" + image.getWidth() + "x" + image.getHeight() + ")\n");
         String userPrompt = """
-        You previously requested to use a tool to answer the user's question:
+You asked to analyze an image to answer the user's question.
 
-        "%s"
+User question:
+"%s"
 
-        The tool has now finished and returned this RESULT:
+The image is attached to this message.
 
-        Images in the payload in base64.
-
-        IMPORTANT:
-        - Do NOT call any tools again.
-        - Do NOT emit any JSON or tool actions.
-        - Just answer the user's original question in natural language,
-          using ONLY the RESULT above as context.
-        """.formatted(session.getLastUserPrompt());
+Instructions:
+- Do NOT call any tools.
+- Do NOT output JSON.
+- Answer the question using the image.
+""".formatted(session.getLastUserPrompt());
 
         session.getClient().sendPrompt(
                 session.model,

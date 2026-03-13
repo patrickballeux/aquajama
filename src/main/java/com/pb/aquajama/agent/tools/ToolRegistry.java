@@ -12,11 +12,9 @@ public final class ToolRegistry {
     public static List<AgentTool> createDefaultTools(ObjectMapper mapper) {
         return List.of(
                 new LaunchAppTool(),
-                new ReadFileTool(mapper),
                 new ReadImageTool(mapper),
-                new SystemInfoTool(),
-                new WebBrowserTool(),
-                new EchoTool()
+                new EchoTool(),
+                new FileBrowserTool()
         );
     }
 }
