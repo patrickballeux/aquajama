@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 /**
  * Tool to load a text file (local path or HTTP/HTTPS URL) and send its content
@@ -107,14 +108,7 @@ public class ReadFileTool implements AgentTool {
           using ONLY the RESULT above as context.
         """.formatted(session.getLastUserPrompt(), content);
 
-        session.getClient().sendPrompt(
-                session.model,
-                session.getDefaultSystemPrompt(),
-                userPrompt,
-                java.util.Collections.emptyList(), // no images
-                true,
-                session // Session as StreamListener
-        );
+        session.sendToolResult(userPrompt, List.of());        
     }
 
     // ------------------------------------------------------------------------

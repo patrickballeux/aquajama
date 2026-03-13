@@ -6,6 +6,7 @@ import com.pb.aquajama.sessions.Session;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.List;
 
 public class SystemInfoTool implements AgentTool {
 
@@ -128,14 +129,8 @@ public class SystemInfoTool implements AgentTool {
           using ONLY the RESULT above as context.
         """.formatted(session.getLastUserPrompt(), rawInfo);
 
-        session.getClient().sendPrompt(
-                session.model,
-                session.getDefaultSystemPrompt(),
-                userPrompt,
-                java.util.Collections.emptyList(),
-                true,
-                session
-        );
+        session.sendToolResult(userPrompt, List.of());
+
     }
 
     private void sendToUi(Session session, String msg) {

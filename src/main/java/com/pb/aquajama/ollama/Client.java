@@ -1,9 +1,10 @@
 package com.pb.aquajama.ollama;
 
+import com.pb.aquajama.sessions.Message;
+
 import java.awt.image.BufferedImage;
 import java.net.http.HttpClient;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Client {
@@ -17,6 +18,7 @@ public class Client {
     private final OllamaStreamHandler streamHandler;
 
     public Client(String url) {
+
         this.url = url;
 
         this.httpClient = HttpClient.newBuilder()
@@ -31,10 +33,9 @@ public class Client {
         return modelService.getModels();
     }
 
-    public void sendPrompt(
+    public void sendMessages(
             Model model,
-            String systemPrompt,
-            String userPrompt,
+            List<Message> history,
             List<BufferedImage> images,
             boolean stream,
             StreamListener listener
@@ -44,8 +45,7 @@ public class Client {
 
         String body = buildChatRequest(
                 model,
-                systemPrompt,
-                userPrompt,
+                history,
                 encodedImages,
                 stream
         );
@@ -55,8 +55,7 @@ public class Client {
 
     private String buildChatRequest(
             Model model,
-            String systemPrompt,
-            String userPrompt,
+            List<Message> history,
             List<String> images,
             boolean stream
     ) {
@@ -70,40 +69,39 @@ public class Client {
 
         boolean first = true;
 
-        if (systemPrompt != null && !systemPrompt.isBlank()) {
-            body.append("{");
-            body.append("\"role\":\"system\",");
-            body.append("\"content\":").append(jsonEscape(systemPrompt));
-            body.append("}");
-            first = false;
-        }
-
-        if (userPrompt != null) {
+        for (Message msg : history) {
 
             if (!first) {
                 body.append(",");
             }
 
             body.append("{");
-            body.append("\"role\":\"user\",");
-            body.append("\"content\":").append(jsonEscape(userPrompt));
+            body.append("\"role\":\"").append(msg.role()).append("\",");
+            body.append("\"content\":").append(jsonEscape(msg.content()));
 
-            if (!images.isEmpty()) {
+            if ("user".equals(msg.role()) && !images.isEmpty()) {
+
                 body.append(",\"images\":[");
+
                 for (int i = 0; i < images.size(); i++) {
+
                     if (i > 0) {
                         body.append(",");
                     }
+
                     body.append("\"").append(images.get(i)).append("\"");
                 }
+
                 body.append("]");
             }
 
             body.append("}");
+
+            first = false;
         }
 
         body.append("],");
-        
+
         body.append("\"stream\":").append(stream);
 
         body.append("}");
@@ -112,9 +110,15 @@ public class Client {
     }
 
     private String jsonEscape(String text) {
+
+        if (text == null) {
+            return "\"\"";
+        }
+
         return "\"" + text
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")
-                .replace("\n", "\\n") + "\"";
+                .replace("\n", "\\n")
+                + "\"";
     }
 }

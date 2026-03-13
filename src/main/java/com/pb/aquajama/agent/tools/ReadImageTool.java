@@ -91,14 +91,7 @@ Instructions:
 - Answer the question using the image.
 """.formatted(session.getLastUserPrompt());
 
-        session.getClient().sendPrompt(
-                session.model,
-                session.getDefaultSystemPrompt(),
-                userPrompt,
-                List.of(image),
-                true,
-                session // Session is still the StreamListener back to the UI
-        );
+        session.sendToolResult(userPrompt, List.of(image));        
     }
 
     // ------------------------------------------------------------------------

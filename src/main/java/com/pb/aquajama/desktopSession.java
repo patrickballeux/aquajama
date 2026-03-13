@@ -27,7 +27,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
     public desktopSession(Session session) {
         initComponents();
         this.session = session;
-        this.setTitle("MODEL: %s".formatted(session.model.name()));
+        this.setTitle("MODEL: %s".formatted(session.getModel().name()));
         session.setUiConsumer(token -> {
             javax.swing.SwingUtilities.invokeLater(() -> {
                 // Basic append
@@ -38,9 +38,9 @@ public class desktopSession extends javax.swing.JInternalFrame {
         txtResponse.setWrapStyleWord(true);
         txtResponse.setLineWrap(true);
 
-        lblModelName.setText(session.model.name());
-        chkVision.setSelected(session.model.canUseVision());
-        chkThink.setSelected(session.model.canThink());
+        lblModelName.setText(session.getModel().name());
+        chkVision.setSelected(session.getModel().canUseVision());
+        chkThink.setSelected(session.getModel().canThink());
         chkVision.setEnabled(false);
         chkThink.setEnabled(false);
         // Cross-platform copy binding

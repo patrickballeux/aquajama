@@ -60,14 +60,7 @@ public class WebBrowserTool implements AgentTool {
             Extract the relevant information to answer the user's request.
             """.formatted(text);
 
-            session.getClient().sendPrompt(
-                session.getModel(),
-                session.getDefaultSystemPrompt(),
-                prompt,
-                null,
-                true,
-                session
-            );
+            session.sendToolResult(prompt, List.of());
 
         } catch (Exception e) {
 

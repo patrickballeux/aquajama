@@ -47,7 +47,6 @@ public class LaunchAppTool implements AgentTool {
         return "launch_app".equals(type) || "list_apps".equals(type);
     }
 
-
     /**
      * New contract: Session calls this for tools that manage their own
      * conversation.
@@ -60,7 +59,7 @@ public class LaunchAppTool implements AgentTool {
             String list = listApplications();
             //sendToUi(session, "[launch_app] Listed installed applications.\n");
 
-       String userPrompt = """
+            String userPrompt = """
         You previously requested to use a tool to answer the user's question:
 
         "%s"
@@ -76,15 +75,7 @@ public class LaunchAppTool implements AgentTool {
           using ONLY the RESULT above as context.
         """.formatted(session.getLastUserPrompt(), list);
 
-
-            session.getClient().sendPrompt(
-                    session.model,
-                    session.getDefaultSystemPrompt(),
-                    userPrompt,
-                    java.util.Collections.emptyList(),
-                    true,
-                    session
-            );
+            session.sendToolResult(userPrompt, List.of());
 
         } else if ("launch_app".equals(type)) {
             String name = action.path("name").asText("");
@@ -106,14 +97,7 @@ public class LaunchAppTool implements AgentTool {
                     provide any relevant follow-up information.
                     """.formatted(name, result);
 
-            session.getClient().sendPrompt(
-                    session.model,
-                    session.getDefaultSystemPrompt(),
-                    userPrompt,
-                    java.util.Collections.emptyList(),
-                    true,
-                    session
-            );
+            session.sendToolResult(userPrompt, List.of());
 
         } else {
             sendToUi(session, "[launch_app] Unsupported action: " + type + "\n");
