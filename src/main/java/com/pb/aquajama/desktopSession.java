@@ -7,7 +7,11 @@ package com.pb.aquajama;
 import com.pb.aquajama.ollama.Token;
 import com.pb.aquajama.sessions.Session;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import javax.swing.AbstractAction;
+import javax.swing.ActionMap;
+import javax.swing.InputMap;
 import javax.swing.KeyStroke;
 import javax.swing.text.DefaultEditorKit;
 
@@ -26,6 +30,28 @@ public class desktopSession extends javax.swing.JInternalFrame {
      */
     public desktopSession(Session session) {
         initComponents();
+        InputMap im = txtPrompt.getInputMap();
+        ActionMap am = txtPrompt.getActionMap();
+
+// ENTER → send message
+        im.put(KeyStroke.getKeyStroke("ENTER"), "sendPrompt");
+
+// SHIFT+ENTER → newline
+        im.put(KeyStroke.getKeyStroke("shift ENTER"), "insertBreak");
+
+        am.put("sendPrompt", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                btnSend.doClick();
+            }
+        });
+
+        am.put("insertBreak", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                txtPrompt.append("\n");
+            }
+        });
         this.session = session;
         this.setTitle("MODEL: %s".formatted(session.getModel().name()));
         session.setUiConsumer(token -> {
@@ -65,7 +91,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
         txtThinking.setText("");
         txtResponse.append(token.text());
         txtResponse.setCaretPosition(txtResponse.getDocument().getLength());
-        
+
     }
 
     /**
@@ -80,15 +106,16 @@ public class desktopSession extends javax.swing.JInternalFrame {
         scroller = new javax.swing.JScrollPane();
         txtResponse = new javax.swing.JTextArea();
         panBottom = new javax.swing.JPanel();
-        txtPrompt = new javax.swing.JTextField();
         btnSend = new javax.swing.JButton();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        txtPrompt = new javax.swing.JTextArea();
+        lblThinking = new javax.swing.JLabel();
+        txtThinking = new javax.swing.JTextField();
         panTop = new javax.swing.JPanel();
         lblModel = new javax.swing.JLabel();
         lblModelName = new javax.swing.JLabel();
         chkVision = new javax.swing.JCheckBox();
         chkThink = new javax.swing.JCheckBox();
-        lblThinking = new javax.swing.JLabel();
-        txtThinking = new javax.swing.JTextField();
 
         setClosable(true);
         setIconifiable(true);
@@ -104,10 +131,20 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
         getContentPane().add(scroller, java.awt.BorderLayout.CENTER);
 
-        txtPrompt.addActionListener(this::txtPromptActionPerformed);
-
         btnSend.setLabel("Send");
         btnSend.addActionListener(this::btnSendActionPerformed);
+
+        txtPrompt.setColumns(20);
+        txtPrompt.setLineWrap(true);
+        txtPrompt.setRows(5);
+        txtPrompt.setWrapStyleWord(true);
+        jScrollPane1.setViewportView(txtPrompt);
+
+        lblThinking.setText("Thinking");
+
+        txtThinking.setEditable(false);
+        txtThinking.setForeground(new java.awt.Color(153, 153, 153));
+        txtThinking.setText(" ");
 
         javax.swing.GroupLayout panBottomLayout = new javax.swing.GroupLayout(panBottom);
         panBottom.setLayout(panBottomLayout);
@@ -115,19 +152,32 @@ public class desktopSession extends javax.swing.JInternalFrame {
             panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panBottomLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(txtPrompt, javax.swing.GroupLayout.DEFAULT_SIZE, 354, Short.MAX_VALUE)
+                .addComponent(lblThinking, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(txtThinking, javax.swing.GroupLayout.DEFAULT_SIZE, 390, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btnSend)
                 .addContainerGap())
+            .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panBottomLayout.createSequentialGroup()
+                    .addContainerGap()
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 524, Short.MAX_VALUE)
+                    .addContainerGap()))
         );
         panBottomLayout.setVerticalGroup(
             panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(panBottomLayout.createSequentialGroup()
-                .addContainerGap()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panBottomLayout.createSequentialGroup()
+                .addContainerGap(100, Short.MAX_VALUE)
                 .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtPrompt, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnSend))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(btnSend)
+                    .addComponent(lblThinking)
+                    .addComponent(txtThinking, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap())
+            .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(panBottomLayout.createSequentialGroup()
+                    .addContainerGap()
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 91, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addContainerGap(32, Short.MAX_VALUE)))
         );
 
         getContentPane().add(panBottom, java.awt.BorderLayout.SOUTH);
@@ -140,31 +190,19 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
         chkThink.setText("Think");
 
-        lblThinking.setText("Thinking");
-
-        txtThinking.setEditable(false);
-        txtThinking.setForeground(new java.awt.Color(153, 153, 153));
-        txtThinking.setText(" ");
-
         javax.swing.GroupLayout panTopLayout = new javax.swing.GroupLayout(panTop);
         panTop.setLayout(panTopLayout);
         panTopLayout.setHorizontalGroup(
             panTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panTopLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(panTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(lblModel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(lblThinking, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(lblModel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(panTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(panTopLayout.createSequentialGroup()
-                        .addComponent(lblModelName, javax.swing.GroupLayout.PREFERRED_SIZE, 178, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(chkVision)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(chkThink)
-                        .addGap(0, 68, Short.MAX_VALUE))
-                    .addComponent(txtThinking))
+                .addComponent(lblModelName, javax.swing.GroupLayout.PREFERRED_SIZE, 178, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 166, Short.MAX_VALUE)
+                .addComponent(chkVision)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chkThink)
                 .addContainerGap())
         );
         panTopLayout.setVerticalGroup(
@@ -176,21 +214,13 @@ public class desktopSession extends javax.swing.JInternalFrame {
                     .addComponent(lblModel)
                     .addComponent(chkVision)
                     .addComponent(chkThink))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(panTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(lblThinking)
-                    .addComponent(txtThinking, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(9, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         getContentPane().add(panTop, java.awt.BorderLayout.PAGE_START);
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
-    private void txtPromptActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtPromptActionPerformed
-        btnSend.doClick();
-    }//GEN-LAST:event_txtPromptActionPerformed
 
     private void btnSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendActionPerformed
         session.sendUserPrompt(txtPrompt.getText());
@@ -202,13 +232,14 @@ public class desktopSession extends javax.swing.JInternalFrame {
     private javax.swing.JButton btnSend;
     private javax.swing.JCheckBox chkThink;
     private javax.swing.JCheckBox chkVision;
+    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JLabel lblModel;
     private javax.swing.JLabel lblModelName;
     private javax.swing.JLabel lblThinking;
     private javax.swing.JPanel panBottom;
     private javax.swing.JPanel panTop;
     private javax.swing.JScrollPane scroller;
-    private javax.swing.JTextField txtPrompt;
+    private javax.swing.JTextArea txtPrompt;
     private javax.swing.JTextArea txtResponse;
     private javax.swing.JTextField txtThinking;
     // End of variables declaration//GEN-END:variables

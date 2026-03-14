@@ -47,15 +47,19 @@ public class Session implements StreamListener {
                 .map(AgentTool::buildRuleSnippet)
                 .collect(Collectors.joining("\n\n"));
 
-        return """
+        return """              
         You are a local desktop assistant with access to these tools.
 
         Answer normally unless a tool is required.
 
         Tools:
         %s
-
+       
         When using a tool return ONLY the JSON payload.
+        When solving a problem:
+                      - Start with the obvious answer first.
+                      - Only use extended reasoning if the problem is complex.
+                      - Keep reasoning concise.
         """.formatted(toolRules);
     }
 
