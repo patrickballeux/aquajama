@@ -14,8 +14,8 @@ import java.util.logging.Logger;
 
 public class OllamaStreamHandler {
 
-    private static final Logger logger =
-            Logger.getLogger(OllamaStreamHandler.class.getName());
+    private static final Logger logger
+            = Logger.getLogger(OllamaStreamHandler.class.getName());
 
     private final String url;
     private final HttpClient httpClient;
@@ -39,16 +39,15 @@ public class OllamaStreamHandler {
                         .POST(HttpRequest.BodyPublishers.ofString(body))
                         .build();
 
-                HttpResponse<java.io.InputStream> response =
-                        httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                HttpResponse<java.io.InputStream> response
+                        = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
                 if (response.statusCode() != 200) {
                     listener.onComplete(new RuntimeException("HTTP " + response.statusCode()));
                     return;
                 }
 
-                try (var is = response.body();
-                     var reader = new BufferedReader(new InputStreamReader(is))) {
+                try (var is = response.body(); var reader = new BufferedReader(new InputStreamReader(is))) {
 
                     String line;
 
@@ -80,9 +79,11 @@ public class OllamaStreamHandler {
                             if (message.has("content")) {
                                 text = message.get("content").asText("");
                             }
-                        }
 
-                        // -------- GENERATE ENDPOINT --------
+                            if (message.has("thinking")) {
+                                thinking = message.get("thinking").asText("");
+                            }
+                        } // -------- GENERATE ENDPOINT --------
                         else if (node.has("response")) {
                             text = node.get("response").asText("");
                         }

@@ -102,6 +102,12 @@ public class Client {
 
         body.append("],");
 
+        if (model.canThink()) {
+            body.append("\"options\":{");
+            body.append("\"think\":true");
+            body.append("},");
+        }
+
         body.append("\"stream\":").append(stream);
 
         body.append("}");

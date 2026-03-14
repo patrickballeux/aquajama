@@ -65,20 +65,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
         txtThinking.setText("");
         txtResponse.append(token.text());
         txtResponse.setCaretPosition(txtResponse.getDocument().getLength());
-        sanitizeText();
-    }
-
-    private void sanitizeText() {
-//        String text = txtResponse.getText();
-//        int index1 = text.indexOf("```json");
-//        if (index1 >= 0){
-//            int index2 = text.indexOf("```", index1 + 6);
-//            if (index2 >= 0){
-//                text = text.substring(0, index1) + text.substring(index2+3);
-//                txtResponse.setText(text);
-//                txtResponse.setCaretPosition(txtResponse.getDocument().getLength());
-//            }
-//        }
+        
     }
 
     /**
@@ -96,7 +83,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
         txtPrompt = new javax.swing.JTextField();
         btnSend = new javax.swing.JButton();
         panTop = new javax.swing.JPanel();
-        lblLabel = new javax.swing.JLabel();
+        lblModel = new javax.swing.JLabel();
         lblModelName = new javax.swing.JLabel();
         chkVision = new javax.swing.JCheckBox();
         chkThink = new javax.swing.JCheckBox();
@@ -145,7 +132,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
         getContentPane().add(panBottom, java.awt.BorderLayout.SOUTH);
 
-        lblLabel.setText("Model");
+        lblModel.setText("Model");
 
         lblModelName.setText("Model Name");
 
@@ -166,7 +153,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
             .addGroup(panTopLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(panTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(lblLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(lblModel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(lblThinking, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(panTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -186,7 +173,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
                 .addGap(6, 6, 6)
                 .addGroup(panTopLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(lblModelName)
-                    .addComponent(lblLabel)
+                    .addComponent(lblModel)
                     .addComponent(chkVision)
                     .addComponent(chkThink))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -215,7 +202,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
     private javax.swing.JButton btnSend;
     private javax.swing.JCheckBox chkThink;
     private javax.swing.JCheckBox chkVision;
-    private javax.swing.JLabel lblLabel;
+    private javax.swing.JLabel lblModel;
     private javax.swing.JLabel lblModelName;
     private javax.swing.JLabel lblThinking;
     private javax.swing.JPanel panBottom;
