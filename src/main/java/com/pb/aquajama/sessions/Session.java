@@ -25,20 +25,18 @@ public class Session implements StreamListener {
     private Consumer<Token> uiConsumer;
     private String lastUserPrompt = "";
     private String assistantBuffer = "";
+    private boolean possibleTool = false;
 
     public Session(Model model, Client client, List<AgentTool> tools) {
         this.model = Objects.requireNonNull(model);
         this.client = Objects.requireNonNull(client);
         this.tools = List.copyOf(Objects.requireNonNull(tools));
+        history.clear();
+        history.add(new Message("system", buildToolPrompt()));
     }
 
     public void setUiConsumer(Consumer<Token> uiConsumer) {
         this.uiConsumer = uiConsumer;
-    }
-
-    public void start(String systemPrompt) {
-        history.clear();
-        history.add(new Message("system", systemPrompt + "\n\n" + buildToolPrompt()));
     }
 
     private String buildToolPrompt() {
@@ -64,10 +62,6 @@ public class Session implements StreamListener {
     }
 
     public void sendUserPrompt(String prompt) {
-        sendUserPrompt(prompt, Collections.emptyList());
-    }
-
-    public void sendUserPrompt(String prompt, List<BufferedImage> images) {
 
         lastUserPrompt = prompt;
         assistantBuffer = "";
@@ -75,20 +69,20 @@ public class Session implements StreamListener {
         history.add(new Message("user", prompt));
 
         if (uiConsumer != null) {
-            uiConsumer.accept(new Token("\n\n**" + prompt + "**\n\n", false,true));
+            uiConsumer.accept(new Token("\n\n**" + prompt + "**\n\n", false, true));
         }
 
         client.sendMessages(
                 model,
                 history,
-                images,
+                Collections.EMPTY_LIST,
                 true,
                 this
         );
     }
 
     public void sendToolResult(String prompt, List<BufferedImage> images) {
-        history.add(new Message("user", prompt));
+        history.add(new Message("tool", prompt));
         client.sendMessages(model, history, images, true, this);
     }
 
@@ -102,17 +96,25 @@ public class Session implements StreamListener {
             return;
         }
 
-        assistantBuffer += token.text();
+        String t = token.text();
+
+        assistantBuffer += t;
+
+        if (t.contains("{")) {
+            possibleTool = true;
+        }
 
         JsonNode toolCall = extractTool(assistantBuffer);
 
         if (toolCall != null) {
             assistantBuffer = "";
+            possibleTool = false;
             invokeTool(toolCall);
             return;
         }
 
-        if (uiConsumer != null) {
+        // Only display text if we're not parsing a tool
+        if (!possibleTool && uiConsumer != null) {
             uiConsumer.accept(token);
         }
     }
@@ -122,7 +124,7 @@ public class Session implements StreamListener {
 
         if (error != null) {
             if (uiConsumer != null) {
-                uiConsumer.accept(new Token("\n[Error] " + error.getMessage(), false,false));
+                uiConsumer.accept(new Token("\n[Error] " + error.getMessage(), false, false));
             }
             return;
         }
@@ -134,7 +136,7 @@ public class Session implements StreamListener {
         assistantBuffer = "";
 
         if (uiConsumer != null) {
-            uiConsumer.accept(new Token("\n", false,false));
+            uiConsumer.accept(new Token("\n", false, false));
         }
     }
 
@@ -175,7 +177,7 @@ public class Session implements StreamListener {
                 if (uiConsumer != null) {
                     uiConsumer.accept(new Token(
                             "[Tool error] " + e.getMessage(),
-                            false,false
+                            false, false
                     ));
                 }
 
@@ -186,7 +188,7 @@ public class Session implements StreamListener {
         if (uiConsumer != null) {
             uiConsumer.accept(new Token(
                     "[Unknown tool] " + action,
-                    false,false
+                    false, false
             ));
         }
     }
