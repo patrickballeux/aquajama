@@ -14,7 +14,8 @@ public final class ToolRegistry {
                 new LaunchAppTool(),
                 new ReadImageTool(mapper),
                 new EchoTool(),
-                new FileBrowserTool()
+                new FileBrowserTool(),
+                new AppleScriptTool()
         );
     }
 }
