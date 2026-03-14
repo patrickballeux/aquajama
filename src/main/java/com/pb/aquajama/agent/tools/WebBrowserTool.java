@@ -31,7 +31,7 @@ public class WebBrowserTool implements AgentTool {
 
         if (url.isBlank()) {
             session.getUiConsumer().accept(
-                    new Token("[web_browser] Missing URL\n", false)
+                    new Token("[web_browser] Missing URL\n", false,false)
             );
             return;
         }
@@ -39,7 +39,7 @@ public class WebBrowserTool implements AgentTool {
         try {
 
             session.getUiConsumer().accept(
-                    new Token("🌐 Fetching webpage...\n", false)
+                    new Token("🌐 Fetching webpage...\n", false,false)
             );
 
             Document doc = Jsoup.parse(new URL(url), 10000);
@@ -65,7 +65,7 @@ public class WebBrowserTool implements AgentTool {
         } catch (Exception e) {
 
             session.getUiConsumer().accept(
-                    new Token("[web_browser] Error: " + e.getMessage() + "\n", false)
+                    new Token("[web_browser] Error: " + e.getMessage() + "\n", false,false)
             );
         }
     }

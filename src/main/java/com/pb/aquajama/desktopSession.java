@@ -6,14 +6,14 @@ package com.pb.aquajama;
 
 import com.pb.aquajama.ollama.Token;
 import com.pb.aquajama.sessions.Session;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.KeyStroke;
-import javax.swing.text.DefaultEditorKit;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 
 /**
  *
@@ -23,6 +23,17 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
     private final Session session;
 
+    private final StyledDocument responseDoc;
+    private final Style normalStyle;
+    private final Style boldStyle;
+    private final Style italicStyle;
+    private final Style codeStyle;
+    private final Style headingStyle;
+    private final Style listStyle;
+    private final Style boldItalic;
+
+    private final StringBuilder streamBuffer = new StringBuilder();
+
     /**
      * Creates new form desktopSession
      *
@@ -30,6 +41,31 @@ public class desktopSession extends javax.swing.JInternalFrame {
      */
     public desktopSession(Session session) {
         initComponents();
+        responseDoc = txtResponse.getStyledDocument();
+
+        normalStyle = txtResponse.addStyle("normal", null);
+
+        boldStyle = txtResponse.addStyle("bold", null);
+        StyleConstants.setBold(boldStyle, true);
+
+        italicStyle = txtResponse.addStyle("italic", null);
+        StyleConstants.setItalic(italicStyle, true);
+
+        codeStyle = txtResponse.addStyle("code", null);
+        StyleConstants.setFontFamily(codeStyle, "Monospaced");
+        StyleConstants.setBackground(codeStyle, new java.awt.Color(240, 240, 240));
+
+        headingStyle = txtResponse.addStyle("heading", null);
+        StyleConstants.setBold(headingStyle, true);
+        StyleConstants.setFontSize(headingStyle, 18);
+
+        listStyle = txtResponse.addStyle("list", null);
+        StyleConstants.setLeftIndent(listStyle, 10);
+
+        boldItalic = txtResponse.addStyle("boldItalic", null);
+        StyleConstants.setBold(boldItalic, true);
+        StyleConstants.setItalic(boldItalic, true);
+
         InputMap im = txtPrompt.getInputMap();
         ActionMap am = txtPrompt.getActionMap();
 
@@ -60,21 +96,13 @@ public class desktopSession extends javax.swing.JInternalFrame {
                 appendToken(token);
             });
         });
-        txtResponse.setEditable(false);
-        txtResponse.setWrapStyleWord(true);
-        txtResponse.setLineWrap(true);
 
         lblModelName.setText(session.getModel().name());
         chkVision.setSelected(session.getModel().canUseVision());
         chkThink.setSelected(session.getModel().canThink());
         chkVision.setEnabled(false);
         chkThink.setEnabled(false);
-        // Cross-platform copy binding
-        int mask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-        KeyStroke copyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_C, mask);
 
-        txtResponse.getInputMap().put(copyStroke, DefaultEditorKit.copyAction);
-        txtResponse.getActionMap().get(DefaultEditorKit.copyAction);
         javax.swing.SwingUtilities.invokeLater(() -> txtPrompt.requestFocusInWindow());
         javax.swing.SwingUtilities.invokeLater(() -> this.pack());
     }
@@ -82,16 +110,114 @@ public class desktopSession extends javax.swing.JInternalFrame {
     private void appendToken(Token token) {
 
         if (token.isThinking()) {
-            txtThinking.setText(txtThinking.getText().concat(token.text()));
-            if (token.text().contains("\n")) {
-                txtThinking.setText("");
+            String text = txtThinking.getText();
+            text = text.concat(token.text());
+            if (text.contains("\n")) {
+                text = text.substring(text.indexOf("\n")).trim();
             }
+            if (text.length() > 50) {
+                text = text.substring(50);
+            }
+            txtThinking.setText(text);
             return;
         }
-        txtThinking.setText("");
-        txtResponse.append(token.text());
-        txtResponse.setCaretPosition(txtResponse.getDocument().getLength());
 
+        txtThinking.setText("");
+
+        streamBuffer.append(token.text());
+        boolean fromUser = token.fromUser();
+        while (true) {
+
+            int newline = streamBuffer.indexOf("\n");
+
+            if (newline == -1) {
+                break;
+            }
+
+            String line = streamBuffer.substring(0, newline);
+            streamBuffer.delete(0, newline + 1);
+
+            renderMarkdownLine(line, fromUser);
+        }
+        if (streamBuffer.length() > 0 && streamBuffer.length() > 120) {
+            renderMarkdownLine(streamBuffer.toString(), fromUser);
+            streamBuffer.setLength(0);
+        }
+    }
+
+    private void renderMarkdownLine(String line, boolean fromUser) {
+
+        try {
+
+            // headings
+            if (line.startsWith("# ")) {
+                insertStyled(line.substring(2) + "\n", headingStyle, fromUser);
+                return;
+            }
+
+            // bullet list
+            if (line.startsWith("- ")) {
+                insertStyled("• " + line.substring(2) + "\n", listStyle, fromUser);
+                return;
+            }
+
+            int i = 0;
+
+            while (i < line.length()) {
+
+                // bold
+                if (line.startsWith("**", i)) {
+                    int end = line.indexOf("**", i + 2);
+                    if (end != -1) {
+                        insertStyled(line.substring(i + 2, end), boldStyle, fromUser);
+                        i = end + 2;
+                        continue;
+                    }
+                }
+
+                // italic
+                if (line.startsWith("*", i)) {
+                    int end = line.indexOf("*", i + 1);
+                    if (end != -1) {
+                        insertStyled(line.substring(i + 1, end), italicStyle, fromUser);
+                        i = end + 1;
+                        continue;
+                    }
+                }
+
+                // inline code
+                if (line.startsWith("`", i)) {
+                    int end = line.indexOf("`", i + 1);
+                    if (end != -1) {
+                        insertStyled(line.substring(i + 1, end), codeStyle, fromUser);
+                        i = end + 1;
+                        continue;
+                    }
+                }
+
+                insertStyled(String.valueOf(line.charAt(i)), normalStyle, fromUser);
+                i++;
+            }
+
+            insertStyled("\n", normalStyle, fromUser);
+
+            txtResponse.setCaretPosition(responseDoc.getLength());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void insertStyled(String text, Style style, boolean fromUser) throws Exception {
+        if (!text.isEmpty()) {
+            if (fromUser) {
+                StyleConstants.setForeground(style, java.awt.Color.GRAY);
+            } else {
+                StyleConstants.setForeground(style, java.awt.Color.BLACK);
+            }
+
+            responseDoc.insertString(responseDoc.getLength(), text, style);
+        }
     }
 
     /**
@@ -103,19 +229,18 @@ public class desktopSession extends javax.swing.JInternalFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        scroller = new javax.swing.JScrollPane();
-        txtResponse = new javax.swing.JTextArea();
         panBottom = new javax.swing.JPanel();
         btnSend = new javax.swing.JButton();
-        jScrollPane1 = new javax.swing.JScrollPane();
+        scrollPrompt = new javax.swing.JScrollPane();
         txtPrompt = new javax.swing.JTextArea();
-        lblThinking = new javax.swing.JLabel();
-        txtThinking = new javax.swing.JTextField();
+        txtThinking = new javax.swing.JLabel();
         panTop = new javax.swing.JPanel();
         lblModel = new javax.swing.JLabel();
         lblModelName = new javax.swing.JLabel();
         chkVision = new javax.swing.JCheckBox();
         chkThink = new javax.swing.JCheckBox();
+        scrollMD = new javax.swing.JScrollPane();
+        txtResponse = new javax.swing.JTextPane();
 
         setClosable(true);
         setIconifiable(true);
@@ -125,12 +250,6 @@ public class desktopSession extends javax.swing.JInternalFrame {
         setSize(new java.awt.Dimension(456, 227));
         setVisible(true);
 
-        txtResponse.setColumns(20);
-        txtResponse.setRows(5);
-        scroller.setViewportView(txtResponse);
-
-        getContentPane().add(scroller, java.awt.BorderLayout.CENTER);
-
         btnSend.setLabel("Send");
         btnSend.addActionListener(this::btnSendActionPerformed);
 
@@ -138,13 +257,12 @@ public class desktopSession extends javax.swing.JInternalFrame {
         txtPrompt.setLineWrap(true);
         txtPrompt.setRows(5);
         txtPrompt.setWrapStyleWord(true);
-        jScrollPane1.setViewportView(txtPrompt);
+        scrollPrompt.setViewportView(txtPrompt);
 
-        lblThinking.setText("Thinking");
-
-        txtThinking.setEditable(false);
         txtThinking.setForeground(new java.awt.Color(153, 153, 153));
+        txtThinking.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         txtThinking.setText(" ");
+        txtThinking.setMinimumSize(new java.awt.Dimension(100, 17));
 
         javax.swing.GroupLayout panBottomLayout = new javax.swing.GroupLayout(panBottom);
         panBottom.setLayout(panBottomLayout);
@@ -152,16 +270,14 @@ public class desktopSession extends javax.swing.JInternalFrame {
             panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panBottomLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(lblThinking, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(txtThinking, javax.swing.GroupLayout.DEFAULT_SIZE, 390, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(txtThinking, javax.swing.GroupLayout.DEFAULT_SIZE, 322, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnSend)
                 .addContainerGap())
             .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panBottomLayout.createSequentialGroup()
                     .addContainerGap()
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 524, Short.MAX_VALUE)
+                    .addComponent(scrollPrompt, javax.swing.GroupLayout.DEFAULT_SIZE, 406, Short.MAX_VALUE)
                     .addContainerGap()))
         );
         panBottomLayout.setVerticalGroup(
@@ -170,13 +286,12 @@ public class desktopSession extends javax.swing.JInternalFrame {
                 .addContainerGap(100, Short.MAX_VALUE)
                 .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnSend)
-                    .addComponent(lblThinking)
                     .addComponent(txtThinking, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
             .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(panBottomLayout.createSequentialGroup()
                     .addContainerGap()
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 91, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(scrollPrompt, javax.swing.GroupLayout.PREFERRED_SIZE, 91, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addContainerGap(32, Short.MAX_VALUE)))
         );
 
@@ -199,7 +314,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
                 .addComponent(lblModel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(lblModelName, javax.swing.GroupLayout.PREFERRED_SIZE, 178, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 166, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 48, Short.MAX_VALUE)
                 .addComponent(chkVision)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(chkThink)
@@ -219,10 +334,18 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
         getContentPane().add(panTop, java.awt.BorderLayout.PAGE_START);
 
+        txtResponse.setEditable(false);
+        txtResponse.setBackground(new java.awt.Color(255, 255, 255));
+        txtResponse.setMinimumSize(new java.awt.Dimension(62, 200));
+        scrollMD.setViewportView(txtResponse);
+
+        getContentPane().add(scrollMD, java.awt.BorderLayout.CENTER);
+
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnSendActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendActionPerformed
+        streamBuffer.setLength(0);
         session.sendUserPrompt(txtPrompt.getText());
         txtPrompt.setText("");
     }//GEN-LAST:event_btnSendActionPerformed
@@ -232,15 +355,14 @@ public class desktopSession extends javax.swing.JInternalFrame {
     private javax.swing.JButton btnSend;
     private javax.swing.JCheckBox chkThink;
     private javax.swing.JCheckBox chkVision;
-    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JLabel lblModel;
     private javax.swing.JLabel lblModelName;
-    private javax.swing.JLabel lblThinking;
     private javax.swing.JPanel panBottom;
     private javax.swing.JPanel panTop;
-    private javax.swing.JScrollPane scroller;
+    private javax.swing.JScrollPane scrollMD;
+    private javax.swing.JScrollPane scrollPrompt;
     private javax.swing.JTextArea txtPrompt;
-    private javax.swing.JTextArea txtResponse;
-    private javax.swing.JTextField txtThinking;
+    private javax.swing.JTextPane txtResponse;
+    private javax.swing.JLabel txtThinking;
     // End of variables declaration//GEN-END:variables
 }

@@ -43,7 +43,7 @@ Only output the JSON action when invoking the tool.
         String script = action.path("script").asText("");
 
         if (script.isBlank()) {
-            session.getUiConsumer().accept(new Token("[applescript] Missing script\n",false));
+            session.getUiConsumer().accept(new Token("[applescript] Missing script\n",false,false));
             return;
         }
 
@@ -70,6 +70,6 @@ Only output the JSON action when invoking the tool.
 
         process.waitFor();
 
-        session.getUiConsumer().accept(new Token("[applescript]\n" + result + "\n",false));
+        session.getUiConsumer().accept(new Token("[applescript]\n" + result + "\n",false,false));
     }
 }

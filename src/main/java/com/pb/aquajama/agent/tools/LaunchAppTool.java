@@ -168,7 +168,7 @@ public class LaunchAppTool implements AgentTool {
 
     private void sendToUi(Session session, String msg) {
         if (session.getUiConsumer() != null) {
-            session.getUiConsumer().accept(new Token(msg, false));
+            session.getUiConsumer().accept(new Token(msg, false,false));
         }
     }
 }

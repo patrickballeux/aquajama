@@ -94,11 +94,11 @@ public class OllamaStreamHandler {
                         }
 
                         if (!thinking.isEmpty()) {
-                            listener.onToken(new Token(thinking, true));
+                            listener.onToken(new Token(thinking, true,false));
                         }
 
                         if (!text.isEmpty()) {
-                            listener.onToken(new Token(text, false));
+                            listener.onToken(new Token(text, false,false));
                         }
 
                         if (done) {

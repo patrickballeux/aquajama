@@ -22,7 +22,7 @@ public class EchoTool implements AgentTool {
         String text = node.path("text").asText("");
 
         if (session.getUiConsumer() != null){
-            session.getUiConsumer().accept(new Token(text,false));
+            session.getUiConsumer().accept(new Token(text,false,false));
         }        
     }
 

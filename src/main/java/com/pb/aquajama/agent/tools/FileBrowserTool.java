@@ -141,7 +141,7 @@ public class FileBrowserTool implements AgentTool {
     private void send(Session session, String msg) {
 
         if (session.getUiConsumer() != null) {
-            session.getUiConsumer().accept(new Token(msg, false));
+            session.getUiConsumer().accept(new Token(msg, false,false));
         }
     }
 }

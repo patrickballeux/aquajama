@@ -75,7 +75,7 @@ public class Session implements StreamListener {
         history.add(new Message("user", prompt));
 
         if (uiConsumer != null) {
-            uiConsumer.accept(new Token("* " + prompt + "\n", false));
+            uiConsumer.accept(new Token("\n\n**" + prompt + "**\n\n", false,true));
         }
 
         client.sendMessages(
@@ -122,7 +122,7 @@ public class Session implements StreamListener {
 
         if (error != null) {
             if (uiConsumer != null) {
-                uiConsumer.accept(new Token("\n[Error] " + error.getMessage(), false));
+                uiConsumer.accept(new Token("\n[Error] " + error.getMessage(), false,false));
             }
             return;
         }
@@ -134,7 +134,7 @@ public class Session implements StreamListener {
         assistantBuffer = "";
 
         if (uiConsumer != null) {
-            uiConsumer.accept(new Token("\n", false));
+            uiConsumer.accept(new Token("\n", false,false));
         }
     }
 
@@ -175,7 +175,7 @@ public class Session implements StreamListener {
                 if (uiConsumer != null) {
                     uiConsumer.accept(new Token(
                             "[Tool error] " + e.getMessage(),
-                            false
+                            false,false
                     ));
                 }
 
@@ -186,7 +186,7 @@ public class Session implements StreamListener {
         if (uiConsumer != null) {
             uiConsumer.accept(new Token(
                     "[Unknown tool] " + action,
-                    false
+                    false,false
             ));
         }
     }
