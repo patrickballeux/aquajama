@@ -91,23 +91,18 @@ Error handling:
         boolean success = process.exitValue() == 0;
 
         String response = """
-                          The prompt was:
-                          
+                          This is the successful result for the AppleScriptTool:
+
                           %s
                           
-                          This is the result.
-                            {
-                              "success": %s,
-                              "result": %s
-                            }
+                          Rules:
+                          - Answer the prompt of the user simply from this result.
+                          - Do not invoke another tool.
                           
-                          If success = true, Answer the prompt of the user.
-                          if success = false, send an explanation to the user why if failed.
-                        """.formatted(
-                session.getLastUserPrompt(),
-                success,
-                "\"" + result.toString().trim().replace("\"", "\\\"") + "\""
-        );
+                        """.formatted(result.toString().trim().replace("\"", "\\\""));
+        if (!success) {
+            response = "The AppleScriptTool failed:  Here is the error message: %s".formatted(result.toString().trim().replace("\"", "\\\""));
+        }
         System.out.println(response);
         session.sendToolResult(response, List.of());
     }

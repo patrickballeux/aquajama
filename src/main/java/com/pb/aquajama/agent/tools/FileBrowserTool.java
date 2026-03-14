@@ -47,7 +47,8 @@ public class FileBrowserTool implements AgentTool {
 
         Rules:
         - Use 'list' before navigating.
-        - Paths can be relative to the current directory.
+        - Paths are abolute.
+        - When a path is not absolute, it is referring to the current directoy.
         - Do not attempt to access system files.
         """.formatted(home);
     }

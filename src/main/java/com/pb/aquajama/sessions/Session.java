@@ -82,7 +82,7 @@ public class Session implements StreamListener {
     }
 
     public void sendToolResult(String prompt, List<BufferedImage> images) {
-        history.add(new Message("tool", prompt));
+        history.add(new Message("assistant", prompt));
         client.sendMessages(model, history, images, true, this);
     }
 
