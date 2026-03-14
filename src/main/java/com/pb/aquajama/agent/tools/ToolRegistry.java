@@ -11,7 +11,6 @@ public final class ToolRegistry {
 
     public static List<AgentTool> createDefaultTools(ObjectMapper mapper) {
         return List.of(
-                new LaunchAppTool(),
                 new ReadImageTool(mapper),
                 new EchoTool(),
                 new FileBrowserTool(),

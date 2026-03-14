@@ -6,6 +6,7 @@ import com.pb.aquajama.sessions.Session;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.List;
 
 public class AppleScriptTool implements AgentTool {
 
@@ -19,16 +20,30 @@ public class AppleScriptTool implements AgentTool {
         return """
 Tool: applescript
 
-Use this tool to execute AppleScript commands on macOS.
+Execute AppleScript commands on macOS.
 
 Example:
 {
   "action": "applescript",
-  "script": "tell application \\"Safari\\" to activate"
+  "script": "tell application \"Safari\" to activate"
 }
 
-Use this tool when you need to control macOS applications.
-Only output the JSON action when invoking the tool.
+Guidelines:
+- Only output the JSON action when invoking the tool.
+- The script must be valid AppleScript.
+- Keep scripts simple whenever possible.
+- Prefer AppleScript built-in commands before using `tell application`.
+
+Common examples:
+- Current date → `current date`
+- Current time → `time string of (current date)`
+- Open Safari → `tell application "Safari" to activate`
+
+Error handling:
+- If the tool returns an error, analyze the error message and retry with a corrected script.
+- Retry up to 5 times maximum.
+- Each retry should simplify the script rather than making it more complex.
+- If the task cannot be completed after retries, explain the limitation to the user.              
 """;
     }
 
@@ -43,19 +58,22 @@ Only output the JSON action when invoking the tool.
         String script = action.path("script").asText("");
 
         if (script.isBlank()) {
-            session.getUiConsumer().accept(new Token("[applescript] Missing script\n",false,false));
+            session.getUiConsumer().accept(new Token("[applescript] Missing script\n", false, false));
             return;
         }
-
-        ProcessBuilder pb = new ProcessBuilder("osascript", "-e", script);
-
+        System.out.println("osascript -e '%s'".formatted(script));
+        ProcessBuilder pb = new ProcessBuilder(
+                "/usr/bin/osascript",
+                "-e",
+                script
+        );
         Process process = pb.start();
 
-        BufferedReader out =
-                new BufferedReader(new InputStreamReader(process.getInputStream()));
+        BufferedReader out
+                = new BufferedReader(new InputStreamReader(process.getInputStream()));
 
-        BufferedReader err =
-                new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        BufferedReader err
+                = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
         StringBuilder result = new StringBuilder();
         String line;
@@ -70,6 +88,27 @@ Only output the JSON action when invoking the tool.
 
         process.waitFor();
 
-        session.getUiConsumer().accept(new Token("[applescript]\n" + result + "\n",false,false));
+        boolean success = process.exitValue() == 0;
+
+        String response = """
+                          The prompt was:
+                          
+                          %s
+                          
+                          This is the result.
+                            {
+                              "success": %s,
+                              "result": %s
+                            }
+                          
+                          If success = true, Answer the prompt of the user.
+                          if success = false, send an explanation to the user why if failed.
+                        """.formatted(
+                session.getLastUserPrompt(),
+                success,
+                "\"" + result.toString().trim().replace("\"", "\\\"") + "\""
+        );
+        System.out.println(response);
+        session.sendToolResult(response, List.of());
     }
 }

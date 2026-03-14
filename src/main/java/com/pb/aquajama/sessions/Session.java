@@ -121,7 +121,6 @@ public class Session implements StreamListener {
 
     @Override
     public void onComplete(Throwable error) {
-
         if (error != null) {
             if (uiConsumer != null) {
                 uiConsumer.accept(new Token("\n[Error] " + error.getMessage(), false, false));
@@ -131,13 +130,12 @@ public class Session implements StreamListener {
 
         if (!assistantBuffer.isBlank()) {
             history.add(new Message("assistant", assistantBuffer));
+            if (uiConsumer != null) {
+                uiConsumer.accept(new Token("\n", false, false));
+            }
         }
-
         assistantBuffer = "";
-
-        if (uiConsumer != null) {
-            uiConsumer.accept(new Token("\n", false, false));
-        }
+        possibleTool = false;
     }
 
     private JsonNode extractTool(String content) {

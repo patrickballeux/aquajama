@@ -115,7 +115,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
             if (text.contains("\n")) {
                 text = text.substring(text.indexOf("\n")).trim();
             }
-            if (text.length() > 50) {
+            if (text.length() > 150) {
                 text = text.substring(50);
             }
             txtThinking.setText(text);
