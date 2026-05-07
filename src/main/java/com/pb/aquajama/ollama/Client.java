@@ -1,8 +1,11 @@
 package com.pb.aquajama.ollama;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.pb.aquajama.agent.tools.AgentTool;
 import com.pb.aquajama.sessions.Message;
 
-import java.awt.image.BufferedImage;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
@@ -13,6 +16,7 @@ public class Client {
 
     private final String url;
     private final HttpClient httpClient;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private final OllamaModelService modelService;
     private final OllamaStreamHandler streamHandler;
@@ -36,17 +40,15 @@ public class Client {
     public void sendMessages(
             Model model,
             List<Message> history,
-            List<BufferedImage> images,
+            List<AgentTool> tools,
             boolean stream,
             StreamListener listener
     ) {
 
-        List<String> encodedImages = ImageEncoder.encode(images);
-
         String body = buildChatRequest(
                 model,
                 history,
-                encodedImages,
+                tools,
                 stream
         );
 
@@ -56,75 +58,49 @@ public class Client {
     private String buildChatRequest(
             Model model,
             List<Message> history,
-            List<String> images,
+            List<AgentTool> tools,
             boolean stream
     ) {
 
-        StringBuilder body = new StringBuilder();
+        ObjectNode body = mapper.createObjectNode();
+        body.put("model", model.name());
 
-        body.append("{");
-        body.append("\"model\":\"").append(model.name()).append("\",");
-
-        body.append("\"messages\":[");
-
-        boolean first = true;
-
+        ArrayNode messages = body.putArray("messages");
         for (Message msg : history) {
+            ObjectNode message = messages.addObject();
+            message.put("role", msg.role());
+            message.put("content", msg.content());
 
-            if (!first) {
-                body.append(",");
+            if (msg.toolName() != null) {
+                message.put("tool_name", msg.toolName());
             }
 
-            body.append("{");
-            body.append("\"role\":\"").append(msg.role()).append("\",");
-            body.append("\"content\":").append(jsonEscape(msg.content()));
-
-            if ("user".equals(msg.role()) && !images.isEmpty()) {
-
-                body.append(",\"images\":[");
-
-                for (int i = 0; i < images.size(); i++) {
-
-                    if (i > 0) {
-                        body.append(",");
-                    }
-
-                    body.append("\"").append(images.get(i)).append("\"");
-                }
-
-                body.append("]");
+            if (!msg.toolCalls().isEmpty()) {
+                ArrayNode toolCalls = message.putArray("tool_calls");
+                msg.toolCalls().forEach(toolCalls::add);
             }
 
-            body.append("}");
-
-            first = false;
+            List<String> encodedImages = ImageEncoder.encode(msg.images());
+            if (!encodedImages.isEmpty()) {
+                ArrayNode images = message.putArray("images");
+                encodedImages.forEach(images::add);
+            }
         }
 
-        body.append("],");
+        if (model.canUseTools() && !tools.isEmpty()) {
+            ArrayNode toolDefinitions = body.putArray("tools");
+            tools.stream()
+                    .map(AgentTool::getDefinition)
+                    .forEach(toolDefinitions::add);
+        }
 
         if (model.canThink()) {
-            body.append("\"options\":{");
-            body.append("\"think\":true");
-            body.append("},");
+            ObjectNode options = body.putObject("options");
+            options.put("think", true);
         }
 
-        body.append("\"stream\":").append(stream);
-
-        body.append("}");
+        body.put("stream", stream);
 
         return body.toString();
-    }
-
-    private String jsonEscape(String text) {
-
-        if (text == null) {
-            return "\"\"";
-        }
-
-        return "\"" + text
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                + "\"";
     }
 }

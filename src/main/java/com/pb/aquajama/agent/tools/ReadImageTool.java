@@ -2,7 +2,7 @@ package com.pb.aquajama.agent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pb.aquajama.ollama.Token;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pb.aquajama.sessions.Session;
 
 import javax.imageio.ImageIO;
@@ -25,7 +25,7 @@ public class ReadImageTool implements AgentTool {
     }
 
     @Override
-    public String getActionName() {
+    public String getName() {
         return "read_image";
     }
 
@@ -34,22 +34,24 @@ public class ReadImageTool implements AgentTool {
     }
 
     @Override
-    public String buildRuleSnippet() {
-        return """
-               read_image: Load an image for analysis.
-               Use this tool when the user asks to describe, analyze,
-               or answer questions about an image.
+    public ObjectNode getDefinition() {
+        ObjectNode parameters = mapper.createObjectNode();
+        parameters.put("type", "object");
+        ObjectNode properties = parameters.putObject("properties");
+        properties.putObject("path")
+                .put("type", "string")
+                .put("description", "A local image path or HTTP/HTTPS image URL.");
+        parameters.putArray("required").add("path");
 
-               Provide a JSON command like:
-               { "action": "read_image", "path": "/full/path/to/image.png" }
-               or:
-               { "action": "read_image", "path": "https://example.com/image.jpg" }
-               """;
-    }
+        ObjectNode function = mapper.createObjectNode();
+        function.put("name", getName());
+        function.put("description", "Load an image for analysis.");
+        function.set("parameters", parameters);
 
-    @Override
-    public boolean supports(JsonNode action) {
-        return "read_image".equals(action.path("action").asText());
+        ObjectNode definition = mapper.createObjectNode();
+        definition.put("type", "function");
+        definition.set("function", function);
+        return definition;
     }
 
     /**
@@ -57,24 +59,21 @@ public class ReadImageTool implements AgentTool {
      * Session.
      */
     @Override
-    public void execute(JsonNode action, Session session) throws Exception {
+    public ToolResult execute(JsonNode action, Session session) throws Exception {
         String path = action.path("path").asText();
         if (path == null || path.isEmpty()) {
-            sendToUi(session, "[read_image] Missing 'path' parameter.\n");
-            return;
+            return ToolResult.of("[read_image] Missing 'path' parameter.");
         }
 
         BufferedImage image;
         try {
             image = loadImage(path);
         } catch (IOException e) {
-            sendToUi(session, "[read_image] Unable to load image from: " + path + " (" + e.getMessage() + ")\n");
-            return;
+            return ToolResult.of("[read_image] Unable to load image from: " + path + " (" + e.getMessage() + ")");
         }
 
         if (image == null) {
-            sendToUi(session, "[read_image] Unable to load image from: " + path + "\n");
-            return;
+            return ToolResult.of("[read_image] Unable to load image from: " + path);
         }
 
         String userPrompt = """
@@ -92,6 +91,7 @@ Instructions:
 """.formatted(session.getLastUserPrompt());
 
         session.sendToolResult(userPrompt, List.of(image));        
+        return ToolResult.of("Image loaded for analysis.");
     }
 
     // ------------------------------------------------------------------------
@@ -104,12 +104,6 @@ Instructions:
                 throw new IOException("File not found: " + pathOrUrl);
             }
             return ImageIO.read(file);
-        }
-    }
-
-    private void sendToUi(Session session, String msg) {
-        if (session.getUiConsumer() != null) {
-            session.getUiConsumer().accept(new Token(msg, false,false));
         }
     }
 }

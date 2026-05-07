@@ -1,36 +1,44 @@
 package com.pb.aquajama.agent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.pb.aquajama.ollama.Token;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pb.aquajama.sessions.Session;
 
 public class EchoTool implements AgentTool {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Override
-    public String getActionName() {
+    public String getName() {
         return "echo";
     }
 
     @Override
-    public boolean supports(JsonNode node) {
-        return "echo".equalsIgnoreCase(node.path("action").asText());
+    public ObjectNode getDefinition() {
+        ObjectNode parameters = MAPPER.createObjectNode();
+        parameters.put("type", "object");
+        ObjectNode properties = parameters.putObject("properties");
+        properties.putObject("text")
+                .put("type", "string")
+                .put("description", "The text to echo back.");
+        parameters.putArray("required").add("text");
+
+        ObjectNode function = MAPPER.createObjectNode();
+        function.put("name", getName());
+        function.put("description", "Returns the provided text unchanged. Use only for testing tool integration.");
+        function.set("parameters", parameters);
+
+        ObjectNode definition = MAPPER.createObjectNode();
+        definition.put("type", "function");
+        definition.set("function", function);
+        return definition;
     }
 
     @Override
-    public void execute(JsonNode node, Session session) {
+    public ToolResult execute(JsonNode arguments, Session session) {
 
-        String text = node.path("text").asText("");
-
-        if (session.getUiConsumer() != null){
-            session.getUiConsumer().accept(new Token(text,false,false));
-        }        
-    }
-
-    @Override
-    public String buildRuleSnippet() {
-        return """
-        Tool: echo
-        DO NOT USE THIS TOOL.  Just use plain text.
-        """;
+        String text = arguments.path("text").asText("");
+        return ToolResult.of(text);
     }
 }

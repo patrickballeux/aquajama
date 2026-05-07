@@ -131,8 +131,10 @@
                   <Component id="lblModel" min="-2" pref="50" max="-2" attributes="0"/>
                   <EmptySpace type="unrelated" max="-2" attributes="0"/>
                   <Component id="lblModelName" min="-2" pref="178" max="-2" attributes="0"/>
-                  <EmptySpace pref="48" max="32767" attributes="0"/>
+                  <EmptySpace pref="1" max="32767" attributes="0"/>
                   <Component id="chkVision" min="-2" max="-2" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="chkTools" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="chkThink" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
@@ -147,6 +149,7 @@
                       <Component id="lblModelName" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="lblModel" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="chkVision" alignment="3" min="-2" max="-2" attributes="0"/>
+                      <Component id="chkTools" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="chkThink" alignment="3" min="-2" max="-2" attributes="0"/>
                   </Group>
                   <EmptySpace max="32767" attributes="0"/>
@@ -168,6 +171,11 @@
         <Component class="javax.swing.JCheckBox" name="chkVision">
           <Properties>
             <Property name="text" type="java.lang.String" value="Vision"/>
+          </Properties>
+        </Component>
+        <Component class="javax.swing.JCheckBox" name="chkTools">
+          <Properties>
+            <Property name="text" type="java.lang.String" value="Tools"/>
           </Properties>
         </Component>
         <Component class="javax.swing.JCheckBox" name="chkThink">

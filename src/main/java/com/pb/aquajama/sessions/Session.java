@@ -2,16 +2,18 @@ package com.pb.aquajama.sessions;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pb.aquajama.agent.tools.AgentTool;
+import com.pb.aquajama.agent.tools.ToolResult;
 import com.pb.aquajama.ollama.Client;
 import com.pb.aquajama.ollama.Model;
 import com.pb.aquajama.ollama.StreamListener;
+import com.pb.aquajama.ollama.ToolCall;
 import com.pb.aquajama.ollama.Token;
 
 import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class Session implements StreamListener {
 
@@ -25,46 +27,45 @@ public class Session implements StreamListener {
     private Consumer<Token> uiConsumer;
     private String lastUserPrompt = "";
     private String assistantBuffer = "";
-    private boolean possibleTool = false;
+    private final List<ToolCall> pendingToolCalls = new ArrayList<>();
 
     public Session(Model model, Client client, List<AgentTool> tools) {
         this.model = Objects.requireNonNull(model);
         this.client = Objects.requireNonNull(client);
         this.tools = List.copyOf(Objects.requireNonNull(tools));
         history.clear();
-        history.add(new Message("system", buildToolPrompt()));
+        history.add(new Message("system", buildSystemPrompt()));
     }
 
     public void setUiConsumer(Consumer<Token> uiConsumer) {
         this.uiConsumer = uiConsumer;
     }
 
-    private String buildToolPrompt() {
+    private String buildSystemPrompt() {
+        if (!model.canUseTools() || tools.isEmpty()) {
+            return """
+            You are a local desktop assistant.
 
-        String toolRules = tools.stream()
-                .map(AgentTool::buildRuleSnippet)
-                .collect(Collectors.joining("\n\n"));
+            Answer the user naturally.
+            Keep reasoning concise.
+            """;
+        }
 
-        return """              
-        You are a local desktop assistant with access to these tools.
+        return """
+        You are a local desktop assistant.
 
         Answer normally unless a tool is required.
-
-        Tools:
-        %s
-       
-        When using a tool return ONLY the JSON payload.
-        When solving a problem:
-                      - Start with the obvious answer first.
-                      - Only use extended reasoning if the problem is complex.
-                      - Keep reasoning concise.
-        """.formatted(toolRules);
+        Use the provided tools only when they are useful for the user's request.
+        When a tool returns an observation, use it to answer the user naturally.
+        Keep reasoning concise.
+        """;
     }
 
     public void sendUserPrompt(String prompt) {
 
         lastUserPrompt = prompt;
         assistantBuffer = "";
+        pendingToolCalls.clear();
 
         history.add(new Message("user", prompt));
 
@@ -75,15 +76,15 @@ public class Session implements StreamListener {
         client.sendMessages(
                 model,
                 history,
-                Collections.EMPTY_LIST,
+                tools,
                 true,
                 this
         );
     }
 
     public void sendToolResult(String prompt, List<BufferedImage> images) {
-        history.add(new Message("assistant", prompt));
-        client.sendMessages(model, history, images, true, this);
+        history.add(Message.userWithImages(prompt, images));
+        client.sendMessages(model, history, tools, true, this);
     }
 
     @Override
@@ -99,24 +100,14 @@ public class Session implements StreamListener {
         String t = token.text();
 
         assistantBuffer += t;
-
-        if (t.contains("{")) {
-            possibleTool = true;
-        }
-
-        JsonNode toolCall = extractTool(assistantBuffer);
-
-        if (toolCall != null) {
-            assistantBuffer = "";
-            possibleTool = false;
-            invokeTool(toolCall);
-            return;
-        }
-
-        // Only display text if we're not parsing a tool
-        if (!possibleTool && uiConsumer != null) {
+        if (uiConsumer != null) {
             uiConsumer.accept(token);
         }
+    }
+
+    @Override
+    public void onToolCall(ToolCall toolCall) {
+        pendingToolCalls.add(toolCall);
     }
 
     @Override
@@ -128,6 +119,13 @@ public class Session implements StreamListener {
             return;
         }
 
+        if (!pendingToolCalls.isEmpty()) {
+            List<ToolCall> toolCalls = List.copyOf(pendingToolCalls);
+            pendingToolCalls.clear();
+            processToolCalls(toolCalls);
+            return;
+        }
+
         if (!assistantBuffer.isBlank()) {
             history.add(new Message("assistant", assistantBuffer));
             if (uiConsumer != null) {
@@ -135,60 +133,57 @@ public class Session implements StreamListener {
             }
         }
         assistantBuffer = "";
-        possibleTool = false;
     }
 
-    private JsonNode extractTool(String content) {
+    private void processToolCalls(List<ToolCall> toolCalls) {
+        history.add(Message.assistantToolCall(assistantBuffer, toOllamaToolCallNodes(toolCalls)));
+        assistantBuffer = "";
 
-        int start = content.indexOf("{");
-        int end = content.lastIndexOf("}");
-
-        if (start == -1 || end == -1) {
-            return null;
+        for (ToolCall toolCall : toolCalls) {
+            ToolResult result = invokeTool(toolCall);
+            history.add(Message.toolResult(toolCall.name(), result.content()));
         }
 
-        try {
-            JsonNode node = mapper.readTree(content.substring(start, end + 1));
-            if (node.has("action") || node.has("tool")) {
-                return node;
+        client.sendMessages(model, history, tools, true, this);
+    }
+
+    private List<JsonNode> toOllamaToolCallNodes(List<ToolCall> toolCalls) {
+        List<JsonNode> nodes = new ArrayList<>();
+
+        for (ToolCall toolCall : toolCalls) {
+            if (toolCall.raw() != null && !toolCall.raw().isMissingNode()) {
+                nodes.add(toolCall.raw());
+                continue;
             }
-        } catch (Exception ignored) {
+
+            ObjectNode function = mapper.createObjectNode();
+            function.put("name", toolCall.name());
+            function.set("arguments", toolCall.arguments());
+
+            ObjectNode node = mapper.createObjectNode();
+            node.put("id", toolCall.id());
+            node.put("type", "function");
+            node.set("function", function);
+            nodes.add(node);
         }
 
-        return null;
+        return nodes;
     }
 
-    private void invokeTool(JsonNode node) {
-
-        String action = node.path("action").asText("");
-
+    private ToolResult invokeTool(ToolCall toolCall) {
         for (AgentTool tool : tools) {
+            if (!tool.supports(toolCall.name())) {
+                continue;
+            }
+
             try {
-
-                if (tool.supports(node)) {
-                    tool.execute(node, this);
-                    return;
-                }
-
+                return tool.execute(toolCall.arguments(), this);
             } catch (Exception e) {
-
-                if (uiConsumer != null) {
-                    uiConsumer.accept(new Token(
-                            "[Tool error] " + e.getMessage(),
-                            false, false
-                    ));
-                }
-
-                return;
+                return ToolResult.of("[Tool error] " + e.getMessage());
             }
         }
 
-        if (uiConsumer != null) {
-            uiConsumer.accept(new Token(
-                    "[Unknown tool] " + action,
-                    false, false
-            ));
-        }
+        return ToolResult.of("[Unknown tool] " + toolCall.name());
     }
 
     public Client getClient() {

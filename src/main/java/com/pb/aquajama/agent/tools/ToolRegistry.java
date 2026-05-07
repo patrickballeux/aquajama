@@ -11,11 +11,9 @@ public final class ToolRegistry {
 
     public static List<AgentTool> createDefaultTools(ObjectMapper mapper) {
         return List.of(
-                //new ReadImageTool(mapper),
                 new EchoTool(),
-                new RobotDesktopTool()
-                //new FileBrowserTool(),
-                //new AppleScriptTool()
+                new FileBrowserTool(),
+                new SystemInfoTool()
         );
     }
 }

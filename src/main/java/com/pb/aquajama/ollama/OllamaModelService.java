@@ -73,13 +73,14 @@ public class OllamaModelService {
     private Model inspectModel(String name) {
 
         boolean vision = false;
+        boolean tools = false;
         boolean thinking = false;
 
         try {
 
             String body = """
         {
-            "name": "%s"
+            "model": "%s"
         }
         """.formatted(name);
 
@@ -95,7 +96,7 @@ public class OllamaModelService {
 
             if (resp.statusCode() != 200) {
                 logger.warning("Model capabilities did not work %s %s".formatted(name, resp.statusCode()));
-                return new Model(name, vision, thinking);
+                return new Model(name, vision, tools, thinking);
             }
 
             //System.out.println(resp.body());
@@ -113,10 +114,20 @@ public class OllamaModelService {
                         vision = true;
                     }
 
+                    if ("tools".equalsIgnoreCase(c) || "tool".equalsIgnoreCase(c)) {
+                        tools = true;
+                    }
+
                     if ("thinking".equalsIgnoreCase(c)) {
                         thinking = true;
                     }
                 }
+            }
+
+            JsonNode details = root.path("details");
+            if (!thinking) {
+                String family = details.path("family").asText("");
+                thinking = isKnownThinkingFamily(family) || isKnownThinkingFamily(name);
             }
 
         } catch (IOException | InterruptedException e) {
@@ -124,6 +135,14 @@ public class OllamaModelService {
             logger.warning(() -> "Failed to inspect model " + name + ": " + e.getMessage());
         }
 
-        return new Model(name, vision, thinking);
+        return new Model(name, vision, tools, thinking);
+    }
+
+    private boolean isKnownThinkingFamily(String value) {
+        String normalized = value.toLowerCase();
+        return normalized.contains("deepseek-r1")
+                || normalized.contains("deepseek-v3.1")
+                || normalized.contains("qwen3")
+                || normalized.contains("gpt-oss");
     }
 }

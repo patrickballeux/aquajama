@@ -33,6 +33,14 @@ public class desktopSession extends javax.swing.JInternalFrame {
     private final Style boldItalic;
 
     private final StringBuilder streamBuffer = new StringBuilder();
+    private final StringBuilder streamLinePrefix = new StringBuilder();
+    private boolean streamAtLineStart = true;
+    private boolean streamHeadingLine = false;
+    private boolean streamListLine = false;
+    private boolean streamBold = false;
+    private boolean streamItalic = false;
+    private boolean streamCode = false;
+    private boolean streamPendingStar = false;
 
     /**
      * Creates new form desktopSession
@@ -99,8 +107,10 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
         lblModelName.setText(session.getModel().name());
         chkVision.setSelected(session.getModel().canUseVision());
+        chkTools.setSelected(session.getModel().canUseTools());
         chkThink.setSelected(session.getModel().canThink());
         chkVision.setEnabled(false);
+        chkTools.setEnabled(false);
         chkThink.setEnabled(false);
 
         javax.swing.SwingUtilities.invokeLater(() -> txtPrompt.requestFocusInWindow());
@@ -124,8 +134,14 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
         txtThinking.setText("");
 
-        streamBuffer.append(token.text());
         boolean fromUser = token.fromUser();
+        if (!fromUser) {
+            appendStreamingMarkdown(token.text());
+            return;
+        }
+
+        resetStreamingMarkdown();
+        streamBuffer.append(token.text());
         while (true) {
 
             int newline = streamBuffer.indexOf("\n");
@@ -143,6 +159,150 @@ public class desktopSession extends javax.swing.JInternalFrame {
             renderMarkdownLine(streamBuffer.toString(), fromUser);
             streamBuffer.setLength(0);
         }
+    }
+
+    private void appendStreamingMarkdown(String text) {
+        try {
+            for (int i = 0; i < text.length(); i++) {
+                appendStreamingMarkdownChar(text.charAt(i));
+            }
+            txtResponse.setCaretPosition(responseDoc.getLength());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void appendStreamingMarkdownChar(char c) throws Exception {
+
+        if (c == '\n') {
+            flushStreamingLinePrefix();
+            flushStreamingPendingStar();
+            insertStyled("\n", normalStyle, false);
+            resetStreamingMarkdownLine();
+            return;
+        }
+
+        if (streamAtLineStart && consumeStreamingLinePrefix(c)) {
+            return;
+        }
+
+        appendStreamingMarkdownContentChar(c);
+    }
+
+    private boolean consumeStreamingLinePrefix(char c) throws Exception {
+
+        if (streamLinePrefix.isEmpty()) {
+            if (c == '#' || c == '-') {
+                streamLinePrefix.append(c);
+                return true;
+            }
+
+            streamAtLineStart = false;
+            appendStreamingMarkdownContentChar(c);
+            return true;
+        }
+
+        String prefix = streamLinePrefix.toString();
+
+        if ("#".equals(prefix) && c == ' ') {
+            streamHeadingLine = true;
+            streamAtLineStart = false;
+            streamLinePrefix.setLength(0);
+            return true;
+        }
+
+        if ("-".equals(prefix) && c == ' ') {
+            streamListLine = true;
+            streamAtLineStart = false;
+            streamLinePrefix.setLength(0);
+            insertStyled("• ", listStyle, false);
+            return true;
+        }
+
+        flushStreamingLinePrefix();
+        streamAtLineStart = false;
+        appendStreamingMarkdownContentChar(c);
+        return true;
+    }
+
+    private void appendStreamingMarkdownContentChar(char c) throws Exception {
+
+        if (!streamCode && c == '*') {
+            if (streamPendingStar) {
+                streamPendingStar = false;
+                streamBold = !streamBold;
+            } else {
+                streamPendingStar = true;
+            }
+            return;
+        }
+
+        if (streamPendingStar) {
+            streamItalic = !streamItalic;
+            streamPendingStar = false;
+        }
+
+        if (c == '`') {
+            streamCode = !streamCode;
+            return;
+        }
+
+        insertStyled(String.valueOf(c), currentStreamingStyle(), false);
+    }
+
+    private Style currentStreamingStyle() {
+        if (streamCode) {
+            return codeStyle;
+        }
+        if (streamHeadingLine) {
+            return headingStyle;
+        }
+        if (streamBold && streamItalic) {
+            return boldItalic;
+        }
+        if (streamBold) {
+            return boldStyle;
+        }
+        if (streamItalic) {
+            return italicStyle;
+        }
+        if (streamListLine) {
+            return listStyle;
+        }
+        return normalStyle;
+    }
+
+    private void flushStreamingLinePrefix() throws Exception {
+        if (!streamLinePrefix.isEmpty()) {
+            insertStyled(streamLinePrefix.toString(), normalStyle, false);
+            streamLinePrefix.setLength(0);
+        }
+    }
+
+    private void flushStreamingPendingStar() throws Exception {
+        if (streamPendingStar) {
+            if (streamItalic) {
+                streamItalic = false;
+            } else {
+                insertStyled("*", currentStreamingStyle(), false);
+            }
+            streamPendingStar = false;
+        }
+    }
+
+    private void resetStreamingMarkdownLine() {
+        streamAtLineStart = true;
+        streamHeadingLine = false;
+        streamListLine = false;
+        streamBold = false;
+        streamItalic = false;
+        streamCode = false;
+        streamPendingStar = false;
+        streamLinePrefix.setLength(0);
+    }
+
+    private void resetStreamingMarkdown() {
+        resetStreamingMarkdownLine();
     }
 
     private void renderMarkdownLine(String line, boolean fromUser) {
@@ -238,6 +398,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
         lblModel = new javax.swing.JLabel();
         lblModelName = new javax.swing.JLabel();
         chkVision = new javax.swing.JCheckBox();
+        chkTools = new javax.swing.JCheckBox();
         chkThink = new javax.swing.JCheckBox();
         scrollMD = new javax.swing.JScrollPane();
         txtResponse = new javax.swing.JTextPane();
@@ -303,6 +464,8 @@ public class desktopSession extends javax.swing.JInternalFrame {
 
         chkVision.setText("Vision");
 
+        chkTools.setText("Tools");
+
         chkThink.setText("Think");
 
         javax.swing.GroupLayout panTopLayout = new javax.swing.GroupLayout(panTop);
@@ -314,8 +477,10 @@ public class desktopSession extends javax.swing.JInternalFrame {
                 .addComponent(lblModel, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(lblModelName, javax.swing.GroupLayout.PREFERRED_SIZE, 178, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 48, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 1, Short.MAX_VALUE)
                 .addComponent(chkVision)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(chkTools)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(chkThink)
                 .addContainerGap())
@@ -328,6 +493,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
                     .addComponent(lblModelName)
                     .addComponent(lblModel)
                     .addComponent(chkVision)
+                    .addComponent(chkTools)
                     .addComponent(chkThink))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -354,6 +520,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnSend;
     private javax.swing.JCheckBox chkThink;
+    private javax.swing.JCheckBox chkTools;
     private javax.swing.JCheckBox chkVision;
     private javax.swing.JLabel lblModel;
     private javax.swing.JLabel lblModelName;

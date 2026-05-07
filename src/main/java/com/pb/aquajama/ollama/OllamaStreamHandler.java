@@ -83,6 +83,21 @@ public class OllamaStreamHandler {
                             if (message.has("thinking")) {
                                 thinking = message.get("thinking").asText("");
                             }
+
+                            if (message.has("tool_calls") && message.get("tool_calls").isArray()) {
+                                for (JsonNode toolCallNode : message.get("tool_calls")) {
+                                    JsonNode function = toolCallNode.path("function");
+                                    String name = function.path("name").asText("");
+                                    if (name.isBlank()) {
+                                        continue;
+                                    }
+
+                                    String id = toolCallNode.path("id").asText(name);
+                                    JsonNode arguments = normalizeArguments(function.path("arguments"));
+                                    JsonNode raw = normalizedToolCallNode(toolCallNode, arguments);
+                                    listener.onToolCall(new ToolCall(id, name, arguments, raw));
+                                }
+                            }
                         } // -------- GENERATE ENDPOINT --------
                         else if (node.has("response")) {
                             text = node.get("response").asText("");
@@ -125,5 +140,34 @@ public class OllamaStreamHandler {
             }
 
         }, "ollama-stream").start();
+    }
+
+    private JsonNode normalizeArguments(JsonNode arguments) {
+        if (arguments == null || arguments.isMissingNode() || arguments.isNull()) {
+            return mapper.createObjectNode();
+        }
+
+        if (arguments.isTextual()) {
+            try {
+                return mapper.readTree(arguments.asText());
+            } catch (Exception ignored) {
+                return mapper.createObjectNode();
+            }
+        }
+
+        return arguments;
+    }
+
+    private JsonNode normalizedToolCallNode(JsonNode toolCallNode, JsonNode arguments) {
+        if (!toolCallNode.isObject()) {
+            return toolCallNode;
+        }
+
+        var normalized = toolCallNode.deepCopy();
+        JsonNode function = normalized.path("function");
+        if (function.isObject()) {
+            ((com.fasterxml.jackson.databind.node.ObjectNode) function).set("arguments", arguments);
+        }
+        return normalized;
     }
 }

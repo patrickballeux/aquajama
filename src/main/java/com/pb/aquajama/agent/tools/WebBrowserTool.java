@@ -1,47 +1,54 @@
 package com.pb.aquajama.agent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.pb.aquajama.ollama.Model;
-import com.pb.aquajama.ollama.StreamListener;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pb.aquajama.sessions.Session;
-import com.pb.aquajama.ollama.Token;
-import java.awt.image.BufferedImage;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.net.URL;
-import java.util.List;
 
 public class WebBrowserTool implements AgentTool {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Override
-    public String getActionName() {
+    public String getName() {
         return "web_browser";
     }
 
     @Override
-    public boolean supports(JsonNode node) {
-        return "web_browser".equalsIgnoreCase(node.path("action").asText());
+    public ObjectNode getDefinition() {
+        ObjectNode parameters = MAPPER.createObjectNode();
+        parameters.put("type", "object");
+        ObjectNode properties = parameters.putObject("properties");
+        properties.putObject("url")
+                .put("type", "string")
+                .put("description", "The HTTP or HTTPS URL to retrieve.");
+        parameters.putArray("required").add("url");
+
+        ObjectNode function = MAPPER.createObjectNode();
+        function.put("name", getName());
+        function.put("description", "Retrieve readable text from a webpage.");
+        function.set("parameters", parameters);
+
+        ObjectNode definition = MAPPER.createObjectNode();
+        definition.put("type", "function");
+        definition.set("function", function);
+        return definition;
     }
 
     @Override
-    public void execute(JsonNode node, Session session) {
+    public ToolResult execute(JsonNode node, Session session) {
 
         String url = node.path("url").asText();
 
         if (url.isBlank()) {
-            session.getUiConsumer().accept(
-                    new Token("[web_browser] Missing URL\n", false,false)
-            );
-            return;
+            return ToolResult.of("[web_browser] Missing URL");
         }
 
         try {
-
-            session.getUiConsumer().accept(
-                    new Token("🌐 Fetching webpage...\n", false,false)
-            );
-
             Document doc = Jsoup.parse(new URL(url), 10000);
 
             String text = doc.text();
@@ -60,27 +67,10 @@ public class WebBrowserTool implements AgentTool {
             Extract the relevant information to answer the user's request.
             """.formatted(text);
 
-            session.sendToolResult(prompt, List.of());
+            return ToolResult.of(prompt);
 
         } catch (Exception e) {
-
-            session.getUiConsumer().accept(
-                    new Token("[web_browser] Error: " + e.getMessage() + "\n", false,false)
-            );
+            return ToolResult.of("[web_browser] Error: " + e.getMessage());
         }
-    }
-
-    @Override
-    public String buildRuleSnippet() {
-        return """
-        Tool: web_browser
-        Use this tool to retrieve the content of a webpage.
-
-        Example:
-        {
-          "action": "web_browser",
-          "url": "https://example.com"
-        }
-        """;
     }
 }

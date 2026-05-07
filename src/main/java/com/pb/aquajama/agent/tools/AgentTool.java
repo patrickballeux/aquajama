@@ -1,14 +1,17 @@
 package com.pb.aquajama.agent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public interface AgentTool {
 
-    String getActionName(); // e.g. "send_email"
+    String getName();
 
-    String buildRuleSnippet(); // text to inject into system prompt
+    ObjectNode getDefinition();
 
-    boolean supports(JsonNode action);
+    ToolResult execute(JsonNode arguments, com.pb.aquajama.sessions.Session session) throws Exception;
 
-    void execute(JsonNode action, com.pb.aquajama.sessions.Session session) throws Exception;
+    default boolean supports(String name) {
+        return getName().equals(name);
+    }
 }

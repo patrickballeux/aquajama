@@ -1,6 +1,8 @@
 package com.pb.aquajama.agent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pb.aquajama.sessions.Session;
 
 import java.awt.*;
@@ -11,6 +13,7 @@ import java.util.List;
 public class RobotDesktopTool implements AgentTool {
 
     private final Robot robot;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public RobotDesktopTool() {
         try {
@@ -22,38 +25,37 @@ public class RobotDesktopTool implements AgentTool {
     }
 
     @Override
-    public String getActionName() {
+    public String getName() {
         return "robot_desktop";
     }
 
     @Override
-    public String buildRuleSnippet() {
-        return """
-Tool: robot_desktop
+    public ObjectNode getDefinition() {
+        ObjectNode parameters = MAPPER.createObjectNode();
+        parameters.put("type", "object");
+        ObjectNode properties = parameters.putObject("properties");
+        properties.putObject("command").put("type", "string");
+        properties.putObject("x").put("type", "integer");
+        properties.putObject("y").put("type", "integer");
+        properties.putObject("text").put("type", "string");
+        properties.putObject("amount").put("type", "integer");
+        properties.putObject("ms").put("type", "integer");
+        properties.putArray("keys").addObject().put("type", "string");
+        parameters.putArray("required").add("command");
 
-Control the mouse, keyboard and screen.
+        ObjectNode function = MAPPER.createObjectNode();
+        function.put("name", getName());
+        function.put("description", "Control the mouse, keyboard and screen.");
+        function.set("parameters", parameters);
 
-Commands:
-move_mouse
-click
-double_click
-type_text
-press_key
-scroll
-screenshot
-wait
-
-Return only JSON when using this tool.
-""";
+        ObjectNode definition = MAPPER.createObjectNode();
+        definition.put("type", "function");
+        definition.set("function", function);
+        return definition;
     }
 
     @Override
-    public boolean supports(JsonNode action) {
-        return "robot_desktop".equals(action.path("action").asText());
-    }
-
-    @Override
-    public void execute(JsonNode node, Session session) throws Exception {
+    public ToolResult execute(JsonNode node, Session session) throws Exception {
 
         String command = node.path("command").asText();
 
@@ -141,11 +143,15 @@ Return only JSON when using this tool.
                         List.of(image)
                 );
 
-                return;
+                return ToolResult.of("Screenshot captured.");
+            }
+
+            default -> {
+                return ToolResult.of("[robot_desktop] Unknown command: " + command);
             }
         }
 
-        session.sendToolResult("Command executed: " + command, List.of());
+        return ToolResult.of("Command executed: " + command);
     }
 
     private int keyCode(String key) {

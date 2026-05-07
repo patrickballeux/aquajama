@@ -1,65 +1,50 @@
 package com.pb.aquajama.agent.tools;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.pb.aquajama.ollama.Token;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pb.aquajama.sessions.Session;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.List;
 
 public class AppleScriptTool implements AgentTool {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Override
-    public String getActionName() {
+    public String getName() {
         return "applescript";
     }
 
     @Override
-    public String buildRuleSnippet() {
-        return """
-Tool: applescript
+    public ObjectNode getDefinition() {
+        ObjectNode parameters = MAPPER.createObjectNode();
+        parameters.put("type", "object");
+        ObjectNode properties = parameters.putObject("properties");
+        properties.putObject("script")
+                .put("type", "string")
+                .put("description", "The AppleScript source to execute.");
+        parameters.putArray("required").add("script");
 
-Execute AppleScript commands on macOS.
+        ObjectNode function = MAPPER.createObjectNode();
+        function.put("name", getName());
+        function.put("description", "Execute AppleScript commands on macOS.");
+        function.set("parameters", parameters);
 
-Example:
-{
-  "action": "applescript",
-  "script": "tell application \"Safari\" to activate"
-}
-
-Guidelines:
-- Only output the JSON action when invoking the tool.
-- The script must be valid AppleScript.
-- Keep scripts simple whenever possible.
-- Prefer AppleScript built-in commands before using `tell application`.
-
-Common examples:
-- Current date → `current date`
-- Current time → `time string of (current date)`
-- Open Safari → `tell application "Safari" to activate`
-
-Error handling:
-- If the tool returns an error, analyze the error message and retry with a corrected script.
-- Retry up to 5 times maximum.
-- Each retry should simplify the script rather than making it more complex.
-- If the task cannot be completed after retries, explain the limitation to the user.              
-""";
+        ObjectNode definition = MAPPER.createObjectNode();
+        definition.put("type", "function");
+        definition.set("function", function);
+        return definition;
     }
 
     @Override
-    public boolean supports(JsonNode action) {
-        return "applescript".equalsIgnoreCase(action.path("action").asText());
-    }
-
-    @Override
-    public void execute(JsonNode action, Session session) throws Exception {
+    public ToolResult execute(JsonNode action, Session session) throws Exception {
 
         String script = action.path("script").asText("");
 
         if (script.isBlank()) {
-            session.getUiConsumer().accept(new Token("[applescript] Missing script\n", false, false));
-            return;
+            return ToolResult.of("[applescript] Missing script");
         }
         System.out.println("osascript -e '%s'".formatted(script));
         ProcessBuilder pb = new ProcessBuilder(
@@ -104,6 +89,6 @@ Error handling:
             response = "The AppleScriptTool failed:  Here is the error message: %s".formatted(result.toString().trim().replace("\"", "\\\""));
         }
         System.out.println(response);
-        session.sendToolResult(response, List.of());
+        return ToolResult.of(response);
     }
 }

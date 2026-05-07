@@ -8,15 +8,18 @@ package com.pb.aquajama.ollama;
  *
  * @author patrickballeux
  */
-public record Model(String name, boolean canUseVision, boolean canThink) {
+public record Model(String name, boolean canUseVision, boolean canUseTools, boolean canThink) {
 
     public String toString() {
         var label = name;
         if (canUseVision) {
-            label += " vision";
+            label += " [vision]";
+        }
+        if (canUseTools) {
+            label += " [tools]";
         }
         if (canThink) {
-            label += " think";
+            label += " [thinking]";
         }
 
         return label;
