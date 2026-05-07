@@ -13,8 +13,9 @@ public final class ToolRegistry {
         return List.of(
                 //new ReadImageTool(mapper),
                 new EchoTool(),
-                new FileBrowserTool(),
-                new AppleScriptTool()
+                new RobotDesktopTool()
+                //new FileBrowserTool(),
+                //new AppleScriptTool()
         );
     }
 }

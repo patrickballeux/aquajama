@@ -275,7 +275,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
                 .addComponent(btnSend)
                 .addContainerGap())
             .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panBottomLayout.createSequentialGroup()
+                .addGroup(panBottomLayout.createSequentialGroup()
                     .addContainerGap()
                     .addComponent(scrollPrompt, javax.swing.GroupLayout.DEFAULT_SIZE, 406, Short.MAX_VALUE)
                     .addContainerGap()))
@@ -283,7 +283,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
         panBottomLayout.setVerticalGroup(
             panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panBottomLayout.createSequentialGroup()
-                .addContainerGap(100, Short.MAX_VALUE)
+                .addContainerGap(125, Short.MAX_VALUE)
                 .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnSend)
                     .addComponent(txtThinking, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -291,7 +291,7 @@ public class desktopSession extends javax.swing.JInternalFrame {
             .addGroup(panBottomLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(panBottomLayout.createSequentialGroup()
                     .addContainerGap()
-                    .addComponent(scrollPrompt, javax.swing.GroupLayout.PREFERRED_SIZE, 91, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(scrollPrompt, javax.swing.GroupLayout.PREFERRED_SIZE, 116, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addContainerGap(32, Short.MAX_VALUE)))
         );
 
