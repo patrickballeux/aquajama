@@ -12,7 +12,8 @@ public final class ToolRegistry {
                 new EchoTool(),
                 new FileBrowserTool(),
                 new SystemInfoTool(),
-                new ReadImageTool()
+                new ReadImageTool(),
+                new CodeBrowserTool()
         );
     }
 }
