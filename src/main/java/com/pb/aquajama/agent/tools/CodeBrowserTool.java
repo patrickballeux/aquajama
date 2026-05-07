@@ -46,7 +46,7 @@ public class CodeBrowserTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "code_browser";
+        return "code_assistant";
     }
 
     @Override
@@ -58,31 +58,37 @@ public class CodeBrowserTool implements AgentTool {
 
         ObjectNode command = properties.putObject("command");
         command.put("type", "string");
-        command.put("description", "The code browser operation to perform.");
+        command.put("description", """
+                What to do with the source code. Typical workflow: inspect_project, search_code or find_references,
+                display_file, then edit_file or create_or_replace_file when the user asks for code changes.
+                """);
         command.putArray("enum")
-                .add("set_root")
-                .add("scan")
-                .add("tree")
-                .add("read")
-                .add("search")
-                .add("references")
-                .add("project_review")
+                .add("inspect_project")
+                .add("list_files")
+                .add("display_file")
+                .add("search_code")
+                .add("find_references")
+                .add("review_project")
                 .add("review_file")
-                .add("suggest_patch")
-                .add("apply_edit")
-                .add("write_file");
+                .add("propose_change")
+                .add("edit_file")
+                .add("create_or_replace_file")
+                .add("set_root");
 
         properties.putObject("path")
                 .put("type", "string")
-                .put("description", "Path relative to the project root, or an absolute path. Required for set_root, read, review_file, and optional for tree/search.");
+                .put("description", """
+                        Source file or folder path, relative to the project root unless absolute. Use with display_file,
+                        review_file, edit_file, create_or_replace_file, set_root, list_files, and optional search roots.
+                        """);
 
         properties.putObject("query")
                 .put("type", "string")
-                .put("description", "Text to search for in source files. Required for search.");
+                .put("description", "Text to search for in source files. Use with search_code.");
 
         properties.putObject("symbol")
                 .put("type", "string")
-                .put("description", "Class, method, field, or other symbol to find references for. Required for references.");
+                .put("description", "Class, method, field, package, or other symbol to find definitions/usages/imports for. Use with find_references.");
 
         properties.putObject("max_chars")
                 .put("type", "integer")
@@ -94,32 +100,33 @@ public class CodeBrowserTool implements AgentTool {
 
         properties.putObject("instructions")
                 .put("type", "string")
-                .put("description", "User request or review goal. Useful for review_file and suggest_patch.");
+                .put("description", "User request, review goal, or desired code change. Use with review_project, review_file, and propose_change.");
 
         properties.putObject("old_text")
                 .put("type", "string")
-                .put("description", "Exact text to replace. Required for apply_edit.");
+                .put("description", "Exact existing source text to replace. Required for edit_file. Include enough context to match one place.");
 
         properties.putObject("new_text")
                 .put("type", "string")
-                .put("description", "Replacement text for apply_edit, or full file content for write_file.");
+                .put("description", "Replacement source text for edit_file, or full file contents for create_or_replace_file.");
 
         properties.putObject("replace_all")
                 .put("type", "boolean")
-                .put("description", "When true, apply_edit replaces all exact occurrences. Defaults to false.");
+                .put("description", "When true, edit_file replaces all exact occurrences. Defaults to false.");
 
         properties.putObject("overwrite")
                 .put("type", "boolean")
-                .put("description", "When true, write_file may replace an existing file. Defaults to false.");
+                .put("description", "When true, create_or_replace_file may replace an existing file. Defaults to false.");
 
         parameters.putArray("required").add("command");
 
         ObjectNode function = MAPPER.createObjectNode();
         function.put("name", getName());
         function.put("description", """
-                Act as a scoped code assistant for a project folder. Use this tool to scan and review a codebase,
-                list source files, read files with line numbers, search code, find references between classes,
-                suggest modifications, and apply exact text edits to source files inside the project root.
+                Source code assistant for the current project. Use this tool whenever the user asks to inspect,
+                understand, review, search, trace references, display source, suggest code changes, or modify project files.
+                It can read source files with line numbers and can apply exact edits or write source files inside the project root.
+                Do not merely describe code changes when the user asks you to modify code: use edit_file or create_or_replace_file.
                 """);
         function.set("parameters", parameters);
 
@@ -135,26 +142,26 @@ public class CodeBrowserTool implements AgentTool {
 
         return switch (command) {
             case "set_root" -> ToolResult.of(setRoot(arguments.path("path").asText("")));
-            case "scan" -> ToolResult.of(scanProject());
-            case "tree" -> ToolResult.of(tree(
+            case "inspect_project" -> ToolResult.of(scanProject());
+            case "list_files" -> ToolResult.of(tree(
                     arguments.path("path").asText(""),
                     arguments.path("max_results").asInt(DEFAULT_MAX_RESULTS)
             ));
-            case "read" -> ToolResult.of(readFile(
+            case "display_file" -> ToolResult.of(readFile(
                     arguments.path("path").asText(""),
                     arguments.path("max_chars").asInt(DEFAULT_MAX_CHARS)
             ));
-            case "search" -> ToolResult.of(search(
+            case "search_code" -> ToolResult.of(search(
                     arguments.path("query").asText(""),
                     arguments.path("path").asText(""),
                     arguments.path("max_results").asInt(DEFAULT_MAX_RESULTS)
             ));
-            case "references" -> ToolResult.of(references(
+            case "find_references" -> ToolResult.of(references(
                     arguments.path("symbol").asText(""),
                     arguments.path("path").asText(""),
                     arguments.path("max_results").asInt(DEFAULT_MAX_RESULTS)
             ));
-            case "project_review" -> ToolResult.of(projectReview(
+            case "review_project" -> ToolResult.of(projectReview(
                     arguments.path("instructions").asText(""),
                     arguments.path("max_results").asInt(DEFAULT_MAX_RESULTS)
             ));
@@ -162,44 +169,44 @@ public class CodeBrowserTool implements AgentTool {
                     arguments.path("path").asText(""),
                     arguments.path("instructions").asText("")
             ));
-            case "suggest_patch" -> ToolResult.of(suggestPatch(
+            case "propose_change" -> ToolResult.of(suggestPatch(
                     arguments.path("path").asText(""),
                     arguments.path("instructions").asText("")
             ));
-            case "apply_edit" -> ToolResult.of(applyEdit(
+            case "edit_file" -> ToolResult.of(applyEdit(
                     arguments.path("path").asText(""),
                     arguments.path("old_text").asText(""),
                     arguments.path("new_text").asText(""),
                     arguments.path("replace_all").asBoolean(false)
             ));
-            case "write_file" -> ToolResult.of(writeFile(
+            case "create_or_replace_file" -> ToolResult.of(writeFile(
                     arguments.path("path").asText(""),
                     arguments.path("new_text").asText(""),
                     arguments.path("overwrite").asBoolean(false)
             ));
-            default -> ToolResult.of("[code_browser] Unknown command: " + command);
+            default -> ToolResult.of("[code_assistant] Unknown command: " + command);
         };
     }
 
     private String setRoot(String path) {
         if (path.isBlank()) {
-            return "[code_browser] Missing path for set_root.";
+            return "[code_assistant] Missing path for set_root.";
         }
 
         Path candidate = Paths.get(path).toAbsolutePath().normalize();
 
         if (!Files.exists(candidate)) {
-            return "[code_browser] Project root does not exist: " + candidate;
+            return "[code_assistant] Project root does not exist: " + candidate;
         }
 
         if (!Files.isDirectory(candidate)) {
-            return "[code_browser] Project root is not a directory: " + candidate;
+            return "[code_assistant] Project root is not a directory: " + candidate;
         }
 
         projectRoot = candidate;
 
         return """
-        [code_browser] Project root set.
+        [code_assistant] Project root set.
 
         Root: %s
         """.formatted(projectRoot);
@@ -252,11 +259,11 @@ public class CodeBrowserTool implements AgentTool {
         Path root = path.isBlank() ? projectRoot : resolveInsideRoot(path);
 
         if (!Files.exists(root)) {
-            return "[code_browser] Path not found: " + path;
+            return "[code_assistant] Path not found: " + path;
         }
 
         if (!Files.isDirectory(root)) {
-            return "[code_browser] Path is not a directory: " + relative(root);
+            return "[code_assistant] Path is not a directory: " + relative(root);
         }
 
         int limit = safeLimit(maxResults, 1, 500);
@@ -299,15 +306,15 @@ public class CodeBrowserTool implements AgentTool {
         Path file = resolveInsideRoot(path);
 
         if (!Files.exists(file)) {
-            return "[code_browser] File not found: " + path;
+            return "[code_assistant] File not found: " + path;
         }
 
         if (!Files.isRegularFile(file)) {
-            return "[code_browser] Path is not a regular file: " + relative(file);
+            return "[code_assistant] Path is not a regular file: " + relative(file);
         }
 
         if (!isSourceLikeFile(file)) {
-            return "[code_browser] Refusing to read non-source or likely-binary file: " + relative(file);
+            return "[code_assistant] Refusing to read non-source or likely-binary file: " + relative(file);
         }
 
         String content = readUtf8(file);
@@ -339,13 +346,13 @@ public class CodeBrowserTool implements AgentTool {
 
     private String search(String query, String path, int maxResults) throws IOException {
         if (query.isBlank()) {
-            return "[code_browser] Missing query for search.";
+            return "[code_assistant] Missing query for search.";
         }
 
         Path root = path.isBlank() ? projectRoot : resolveInsideRoot(path);
 
         if (!Files.exists(root)) {
-            return "[code_browser] Search path not found: " + path;
+            return "[code_assistant] Search path not found: " + path;
         }
 
         int limit = safeLimit(maxResults, 1, 200);
@@ -397,13 +404,13 @@ public class CodeBrowserTool implements AgentTool {
 
     private String references(String symbol, String path, int maxResults) throws IOException {
         if (symbol.isBlank()) {
-            return "[code_browser] Missing symbol for references.";
+            return "[code_assistant] Missing symbol for references.";
         }
 
         Path root = path.isBlank() ? projectRoot : resolveInsideRoot(path);
 
         if (!Files.exists(root)) {
-            return "[code_browser] Reference search path not found: " + path;
+            return "[code_assistant] Reference search path not found: " + path;
         }
 
         int limit = safeLimit(maxResults, 1, 300);
@@ -497,8 +504,8 @@ public class CodeBrowserTool implements AgentTool {
         Review guidance for the model:
         - Start from the user's requested goal.
         - Use search, references, and read before proposing edits.
-        - Prefer small, exact apply_edit calls for modifications.
-        - Use write_file only for new files or full-file rewrites that are clearly justified.
+        - Prefer small, exact edit_file calls for modifications.
+        - Use create_or_replace_file only for new files or full-file rewrites that are clearly justified.
         - After editing, summarize changed files and recommend build/test commands.
         """.formatted(
                 projectRoot,
@@ -516,11 +523,11 @@ public class CodeBrowserTool implements AgentTool {
         Path file = resolveInsideRoot(path);
 
         if (!Files.exists(file) || !Files.isRegularFile(file)) {
-            return "[code_browser] File not found: " + path;
+            return "[code_assistant] File not found: " + path;
         }
 
         if (!isSourceLikeFile(file)) {
-            return "[code_browser] Refusing to review non-source file: " + relative(file);
+            return "[code_assistant] Refusing to review non-source file: " + relative(file);
         }
 
         String content = readUtf8(file);
@@ -541,7 +548,7 @@ public class CodeBrowserTool implements AgentTool {
         - Identify bugs, design issues, missing validation, unsafe assumptions, and maintainability problems.
         - Refer to specific line numbers.
         - Suggest concrete changes.
-        - Do not claim the code was modified. This tool is read-only.
+        - For actual modifications, use edit_file or create_or_replace_file after identifying the exact change.
 
         Source:
         %s
@@ -556,11 +563,11 @@ public class CodeBrowserTool implements AgentTool {
         Path file = resolveInsideRoot(path);
 
         if (!Files.exists(file) || !Files.isRegularFile(file)) {
-            return "[code_browser] File not found: " + path;
+            return "[code_assistant] File not found: " + path;
         }
 
         if (!isSourceLikeFile(file)) {
-            return "[code_browser] Refusing to patch non-source file: " + relative(file);
+            return "[code_assistant] Refusing to patch non-source file: " + relative(file);
         }
 
         String content = readUtf8(file);
@@ -578,7 +585,7 @@ public class CodeBrowserTool implements AgentTool {
         %s
 
         Important:
-        This tool is read-only. The model should propose a patch, but not claim the file was changed.
+        This command is for planning only. To modify code, call edit_file or create_or_replace_file after choosing the exact change.
 
         Preferred response format:
         1. Explain the change briefly.
@@ -598,27 +605,27 @@ public class CodeBrowserTool implements AgentTool {
         Path file = resolveInsideRoot(path);
 
         if (!Files.exists(file) || !Files.isRegularFile(file)) {
-            return "[code_browser] File not found: " + path;
+            return "[code_assistant] File not found: " + path;
         }
 
         if (!isSourceLikeFile(file)) {
-            return "[code_browser] Refusing to edit non-source file: " + relative(file);
+            return "[code_assistant] Refusing to edit non-source file: " + relative(file);
         }
 
         if (oldText.isEmpty()) {
-            return "[code_browser] Missing old_text for apply_edit.";
+            return "[code_assistant] Missing old_text for edit_file.";
         }
 
         String content = readUtf8(file);
         int occurrences = countOccurrences(content, oldText);
 
         if (occurrences == 0) {
-            return "[code_browser] old_text was not found in " + relative(file);
+            return "[code_assistant] old_text was not found in " + relative(file);
         }
 
         if (occurrences > 1 && !replaceAll) {
             return """
-            [code_browser] old_text matched %d times in %s.
+            [code_assistant] old_text matched %d times in %s.
             Set replace_all=true, or provide a more specific old_text snippet.
             """.formatted(occurrences, relative(file));
         }
@@ -630,7 +637,7 @@ public class CodeBrowserTool implements AgentTool {
         Files.writeString(file, updated, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
 
         return """
-        [code_browser] Edit applied.
+        [code_assistant] Edit applied.
 
         File:
         %s
@@ -653,21 +660,21 @@ public class CodeBrowserTool implements AgentTool {
 
     private String writeFile(String path, String content, boolean overwrite) throws IOException {
         if (path == null || path.isBlank()) {
-            return "[code_browser] Missing path for write_file.";
+            return "[code_assistant] Missing path for create_or_replace_file.";
         }
 
         Path file = resolveInsideRoot(path);
 
         if (Files.exists(file) && !overwrite) {
-            return "[code_browser] File already exists. Set overwrite=true to replace: " + relative(file);
+            return "[code_assistant] File already exists. Set overwrite=true to replace: " + relative(file);
         }
 
         if (Files.exists(file) && !Files.isRegularFile(file)) {
-            return "[code_browser] Path is not a regular file: " + relative(file);
+            return "[code_assistant] Path is not a regular file: " + relative(file);
         }
 
         if (!isSourcePath(file)) {
-            return "[code_browser] Refusing to write non-source-like path: " + relative(file);
+            return "[code_assistant] Refusing to write non-source-like path: " + relative(file);
         }
 
         Path parent = file.getParent();
@@ -684,7 +691,7 @@ public class CodeBrowserTool implements AgentTool {
         );
 
         return """
-        [code_browser] File written.
+        [code_assistant] File written.
 
         File:
         %s
@@ -766,7 +773,7 @@ public class CodeBrowserTool implements AgentTool {
                 : projectRoot.resolve(raw).toAbsolutePath().normalize();
 
         if (!resolved.startsWith(projectRoot)) {
-            throw new IllegalArgumentException("[code_browser] Refusing to access path outside project root: " + path);
+            throw new IllegalArgumentException("[code_assistant] Refusing to access path outside project root: " + path);
         }
 
         return resolved;
@@ -831,7 +838,7 @@ public class CodeBrowserTool implements AgentTool {
         try {
             return Files.readString(file, StandardCharsets.UTF_8);
         } catch (MalformedInputException e) {
-            throw new IOException("[code_browser] File is not valid UTF-8 text: " + relative(file), e);
+            throw new IOException("[code_assistant] File is not valid UTF-8 text: " + relative(file), e);
         }
     }
 
