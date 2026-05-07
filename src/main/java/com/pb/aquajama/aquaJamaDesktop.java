@@ -4,10 +4,8 @@
  */
 package com.pb.aquajama;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pb.aquajama.agent.tools.AgentTool;
 import com.pb.aquajama.agent.tools.ToolRegistry;
-import com.pb.aquajama.data.Config;
 import com.pb.aquajama.ollama.Client;
 import com.pb.aquajama.ollama.Model;
 import com.pb.aquajama.sessions.Session;
@@ -24,7 +22,6 @@ import javax.swing.JMenuItem;
 public class aquaJamaDesktop extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(aquaJamaDesktop.class.getName());
-    private final Config config;
     private final Client client;
     private List<Model> models;
     private List<AgentTool> tools;
@@ -34,9 +31,8 @@ public class aquaJamaDesktop extends javax.swing.JFrame {
      */
     public aquaJamaDesktop() {
         initComponents();
-        this.config = new Config();
         this.client = new Client(Client.LOCAL_URL);  // start with local
-        this.tools = ToolRegistry.createDefaultTools(new ObjectMapper());
+        this.tools = ToolRegistry.createDefaultTools();
         initNewSessionMenu();
         var icon = new javax.swing.ImageIcon(getClass().getResource("/icons/logo.png")).getImage();
         this.setIconImage(icon);

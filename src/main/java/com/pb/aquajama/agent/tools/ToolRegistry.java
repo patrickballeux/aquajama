@@ -1,7 +1,5 @@
 package com.pb.aquajama.agent.tools;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.List;
 
 public final class ToolRegistry {
@@ -9,7 +7,7 @@ public final class ToolRegistry {
     private ToolRegistry() {
     }
 
-    public static List<AgentTool> createDefaultTools(ObjectMapper mapper) {
+    public static List<AgentTool> createDefaultTools() {
         return List.of(
                 new EchoTool(),
                 new FileBrowserTool(),
