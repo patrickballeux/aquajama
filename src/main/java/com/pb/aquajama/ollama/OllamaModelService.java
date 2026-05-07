@@ -8,7 +8,9 @@ import java.net.URI;
 import java.net.http.*;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public class OllamaModelService {
@@ -59,7 +61,8 @@ public class OllamaModelService {
                 if (name == null || name.isBlank()) {
                     continue;
                 }
-                models.add(inspectModel(name));
+                long sizeBytes = m.path("size").asLong(0);
+                models.add(inspectModel(name, sizeBytes));
             }
 
         } catch (IOException | InterruptedException e) {
@@ -70,7 +73,13 @@ public class OllamaModelService {
         return models;
     }
 
-    private Model inspectModel(String name) {
+    public Optional<Model> findSmallestModelWith(Model.Capability capability) {
+        return getModels().stream()
+                .filter(model -> model.supports(capability))
+                .min(Comparator.comparingLong(model -> model.sizeBytes() <= 0 ? Long.MAX_VALUE : model.sizeBytes()));
+    }
+
+    private Model inspectModel(String name, long sizeBytes) {
 
         boolean vision = false;
         boolean tools = false;
@@ -96,7 +105,7 @@ public class OllamaModelService {
 
             if (resp.statusCode() != 200) {
                 logger.warning("Model capabilities did not work %s %s".formatted(name, resp.statusCode()));
-                return new Model(name, vision, tools, thinking);
+                return new Model(name, sizeBytes, vision, tools, thinking);
             }
 
             //System.out.println(resp.body());
@@ -135,7 +144,7 @@ public class OllamaModelService {
             logger.warning(() -> "Failed to inspect model " + name + ": " + e.getMessage());
         }
 
-        return new Model(name, vision, tools, thinking);
+        return new Model(name, sizeBytes, vision, tools, thinking);
     }
 
     private boolean isKnownThinkingFamily(String value) {

@@ -11,7 +11,8 @@ public final class ToolRegistry {
         return List.of(
                 new EchoTool(),
                 new FileBrowserTool(),
-                new SystemInfoTool()
+                new SystemInfoTool(),
+                new ReadImageTool()
         );
     }
 }

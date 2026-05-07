@@ -14,4 +14,8 @@ public interface AgentTool {
     default boolean supports(String name) {
         return getName().equals(name);
     }
+
+    default boolean requiresVision() {
+        return false;
+    }
 }

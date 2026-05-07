@@ -142,6 +142,11 @@ public class Session implements StreamListener {
         for (ToolCall toolCall : toolCalls) {
             ToolResult result = invokeTool(toolCall);
             history.add(Message.toolResult(toolCall.name(), result.content()));
+            if (!result.images().isEmpty()) {
+                history.add(Message.userWithImages("""
+                The %s tool returned image data. Use the attached image to answer my original request.
+                """.formatted(toolCall.name()), result.images()));
+            }
         }
 
         client.sendMessages(model, history, tools, true, this);

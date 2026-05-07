@@ -9,6 +9,7 @@ import com.pb.aquajama.sessions.Message;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 public class Client {
 
@@ -35,6 +36,10 @@ public class Client {
 
     public List<Model> getModels() {
         return modelService.getModels();
+    }
+
+    public Optional<Model> findSmallestModelWith(Model.Capability capability) {
+        return modelService.findSmallestModelWith(capability);
     }
 
     public void sendMessages(
@@ -90,6 +95,7 @@ public class Client {
         if (model.canUseTools() && !tools.isEmpty()) {
             ArrayNode toolDefinitions = body.putArray("tools");
             tools.stream()
+                    .filter(tool -> !tool.requiresVision() || model.canUseVision())
                     .map(AgentTool::getDefinition)
                     .forEach(toolDefinitions::add);
         }
